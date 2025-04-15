@@ -8,7 +8,7 @@ I’m sharing these in case they help others going through this intense (but rew
 
 A sincere thank you to Professor Aaron Courville for his inspiring lectures, to the TAs for crafting such challenging and thought-provoking assignments, and to all the students — especially Thomas, Maël and Olivier — whose discussions, questions, and collaboration made the learning process far more engaging. It was a real privilege to be part of such a passionate and driven group.
 
-And for those reading this outside the context of MILA — welcome! You’ll probably get the most out of these notes if you already have some background in math, computer science, and deep learning. A solid starting point is the Deep Learning book: \url{https://www.deeplearningbook.org/}.
+And for those reading this outside the context of MILA — welcome! You’ll probably get the most out of these notes if you already have some background in math, computer science, and deep learning. A solid starting point is the Deep Learning book: https://www.deeplearningbook.org/.
 
 Enjoy the ride — and good luck with your learning journey!
 
