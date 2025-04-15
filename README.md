@@ -12,14 +12,6 @@ And for those reading this outside the context of MILA — welcome! You’ll pro
 
 Enjoy the ride — and good luck with your learning journey!
 
-## Instructor
-
-**Name:** Aaron Courville  
-**Email:** Aaron.Courville@gmail.com  
-**Office Hours:** After classes at the following times:
-- **Monday:** 4:30 PM – 5:00 PM
-- **Wednesday:** 4:30 PM – 5:00 PM
-
 ## Assessment
 
 - **Assignments (75%):**  
