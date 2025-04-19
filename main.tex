@@ -171,6 +171,13 @@ Note importante : Une caractéristique importante du perceptron est qu'il est se
 
 L'ajustement des poids par la correction de l'erreur a permis au perceptron d'apprendre, mais il n'était pas capable de résoudre certains problèmes comme le problème du XOR. Cette limitation a été surmontée avec l'introduction de méthodes d'optimisation plus avancées, telles que la descente de gradient. Cependant, le choix de la fonction d'activation dans ces méthodes est crucial pour assurer un apprentissage efficace.
 
+\subsection{Neural Networks Layer (NEW)}
+In a deep neural network, we can find multiple layers of different functions. The most basic one is a Fully Connected Layer.
+
+For an input of \(N_{in}\) neurons and an output of \(N_{out}\) neurons:
+\[
+\text{Total Parameters} = N_{in} \times N_{out} + N_{out}.
+\]
 
 \subsection{Conception d’un Modèle}
 La conception d'un modele d'apprentissage profond peut être décomposée en 4 étapes :
@@ -374,7 +381,7 @@ This optimiser ensures non-increasing second moment estimates to address converg
 This optimiser dynamically bounds the learning rate to transition smoothly between adaptive methods and SGD.
 %TODO add more details
 
-\subsection{Normalization} \label{sec:normalization}
+\subsection{Normalization} (NEW)
 Normalization accelerates training and stabilizes gradient flow by standardizing activations.
 
 \begin{figure}
@@ -389,7 +396,6 @@ Normalizing inputs (or activations) helps reduce the impact of differing value r
 
 As we can see in figure \ref{fig:enter-label}, the landscape of normalized data will be much easier to traverse during training. Without it, there are some locations that could be complicated to get out of and some points are much further away than others. In the normalized case, everything is "relatively" close.
 
-
 This will also make initialization less critical and leads to faster convergence from various starting points.
 
 Once the parameters are normalised, the learned parameters \(\gamma\) and \(\beta\) are applied:
@@ -397,37 +403,106 @@ Once the parameters are normalised, the learned parameters \(\gamma\) and \(\bet
 \hat{x}_i = \frac{x_i - \mu}{\sqrt{\sigma^2 + \epsilon}},\quad y_i = \gamma \hat{x}_i + \beta.
 \]
 
-\subsubsection{Batch Normalization} \label{sec:batchnorm}
-\textbf{Reference:} Ioffe and Szegedy (ICML 2015)\\
-For a mini-batch of size \(B\) with \(F\) features per channel, we normalize over each channels in all samples
+In neural networks, we can apply layers of normalisation to the data. In such a layer, for \(D\) features, there are \(2 \times D\) trainable parameters (\(\gamma\) and \(\beta\)).
+\textbf{Parameters:}
 \[
-\mu_c = \frac{1}{B \times F} \sum_{b, f} x_{bcf},\quad \sigma^2_c = \frac{1}{B \times F} \sum_{b, f} (x_{bcf} - \mu_c)^2.
+\text{Total Parameters} = 2 \times D,
+\]
+accounting for $\gamma$ and $\beta$ per feature (aside from non-trainable running statistics).
+
+\subsubsection{Batch Normalization}
+\label{sec:batchnorm}
+
+\textbf{Reference:} Ioffe, Szegedy (ICML 2015)
+
+Batch Normalization (BN) normalizes activations across each channel for all samples in a batch.  
+Given batch of examples of size $B$, with channels $C$ and features $F$, we compute:
+\[
+\mu_c = \frac{1}{B*F} \sum_{B,F} x_{bcf}, 
+\quad
+\sigma^2_c = \frac{1}{B*F} \sum_{B,F} (x_{bcf} - \mu_c)^2.
 \]
 
-\subsubsection{Layer Normalization} \label{sec:layernorm}
-\textbf{Reference:} Ba, Kiros, and Hinton\\
-Normalizes over all features for each sample
+\begin{itemize}
+    \item Works well in image processing. Typically inserted between linear/convolution layers and the nonlinearity.
+    \item Works well for large mini-batch sizes.
+\end{itemize}
+
+\subsubsection{Layer Normalization}
+\label{sec:layernorm}
+
+\textbf{Reference:} Ba, Kiros, Hinton
+
+Layer Normalization (LN) normalizes across the features (hidden units) within a single layer for each sample. Given batch of examples of size $B$, with channels $C$ and features $F$, we compute:
 \[
-\mu_b = \frac{1}{C \times F} \sum_{c,f} x_{bcf},\quad \sigma^2_b = \frac{1}{C \times F} \sum_{c,f} (x_{bcf} - \mu_b)^2.
+\mu_b = \frac{1}{C*F} \sum_{C,F} x_{bcf}, 
+\quad
+\sigma^2_b = \frac{1}{C*F} \sum_{C,F} (x_{bcf} - \mu_b)^2.
 \]
 
-\subsubsection{Instance Normalization}\label{sec:instancenorm}
-Normalizes each channel per sample
+\begin{itemize}
+    \item Often used in RNNs and Transformers (especially when mini-batches are small or variable in size).
+    \item Normalization is independent for each training example.
+\end{itemize}
+
+\subsubsection{Instance Normalization}
+\label{sec:instancenorm}
+
+Instance Normalization (IN) normalizes across spatial dimensions for each channel and for each sample independently. It is frequently used in style transfer tasks. Given batch of examples of size $B$, with channels $C$ and features $F$, we compute:
+
 \[
-\mu_{bc} = \frac{1}{F} \sum_{f} x_{bcf},\quad \sigma^2_{bc} = \frac{1}{F} \sum_{f} (x_{bcf} - \mu_{bc})^2.
+\mu_{bc} = \frac{1}{F} \sum_{F} x_{bcf}, 
+\quad
+\sigma^2_{bc} = \frac{1}{F} \sum_{F} (x_{bcf} - \mu_{bc})^2.
 \]
 
-\subsubsection{RMS Normalization}\label{sec:rmsnorm}
-Normalizes using the root mean square
+\begin{itemize}
+    \item Each sample-channel is normalized independently.
+    \item Helps in style transfer by normalizing per-image and per-channel statistics.
+\end{itemize}
+
+\subsubsection{RMS Normalization}
+\label{sec:rmsnorm}
+
+RMS Normalization (RMSNorm) is similar to LayerNorm but normalizes based on the root mean square of the features rather than the variance:
 \[
-\mu_b^2 = \frac{1}{C \times F} \sum_{c,f} x_{bcf}^2,\quad \hat{x}_{bcf} = \frac{x_{bcf}}{\sqrt{\mu_b^2 + \epsilon}}.
+\mu_{\text{b}}^2 = \frac{1}{C*F} \sum_{C,F} x_{bcf}^2
+\quad\text{and}\quad
+\hat{x}_{bcf} = \frac{x_{bcf}}{\sqrt{\mu_b^2 + \epsilon}}
 \]
 
-\subsubsection{Group Normalization}\label{sec:groupnorm}
-Divides channels into \(G\) groups and normalizes each group separately.
+\begin{itemize}
+    \item Does not subtract a mean; only divides by the root mean square.
+    \item Useful in large-scale models due to reduced computational cost compared to LayerNorm.
+\end{itemize}
 
-\subsubsection{Weight Normalization}\label{sec:weightnorm}
-TODO
+\subsubsection{Group Normalization}
+\label{sec:groupnorm}
+
+\textbf{Reference:} Wu and He (2018)
+
+Group Normalization (GN) normalizes by splitting channels into $G$ groups, then normalizing each group’s mean and variance.
+
+\begin{itemize}
+    \item Bridges the gap between LayerNorm and InstanceNorm.
+    \item Works well when mini-batch sizes are small.
+\end{itemize}
+
+\subsubsection{Weight Normalization}
+\label{sec:weightnorm}
+
+Weight Normalization (WN) normalizes the weights (rather than activations). It reparameterizes a weight vector $\mathbf{w}$ as
+\[
+\mathbf{w} = \frac{g}{\|\mathbf{v}\|} \mathbf{v},
+\]
+where $\mathbf{v}$ is a learned direction and $g$ is a learned scalar. Then the output is:
+\[
+y = \phi(\mathbf{w} \cdot \mathbf{x} + b).
+\]
+\begin{itemize}
+    \item Decouples the magnitude of the weights from their direction.
+    \item Simplifies optimization by controlling the length of the weight vector explicitly.
+\end{itemize}
 
 % =============================================================
 \clearpage\newpage
