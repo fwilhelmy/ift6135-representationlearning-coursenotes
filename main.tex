@@ -627,12 +627,17 @@ with zero trainable parameters. There are two main types of pooling
 
 \paragraph{Padding} Adds extra pixels around the input to control output size. Special cases include:
 \begin{itemize}
-    \item \textbf{Valid Convolution}: No padding, reducing spatial dimensions.
-    \item \textbf{Same Convolution (Half Padding)}: Preserves input dimensions.
-    \item \textbf{Full Convolution}: Pads the input to ensure maximum overlap.
+    \item \textbf{Valid Convolution} ($P=0$): no padding, spatial dimensions shrink.
+    \item \textbf{Same Convolution} ($P=\lfloor d\,(K-1)/2\rfloor$): half (or “same”) padding, preserves spatial dimensions.
+    \item \textbf{Full Convolution} ($P=K-1$): full padding, maximizes overlap so the output is larger than the input.
 \end{itemize}
-% TODO add the image in the slides of the course
 
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=0.7\linewidth]{graphics/padding_cnn.png}
+    \caption{Special padding cases for a 2D convolution: to the left valid convolution (no padding), in the middle same convolution (input and output dimensions are the equal), and to the right full convolution (maximum padding).}
+    \label{fig:padding-cnn}
+\end{figure}
 
 \subsection{Receptive Field}
 
