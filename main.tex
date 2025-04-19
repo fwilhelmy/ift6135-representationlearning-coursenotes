@@ -60,7 +60,7 @@ Enjoy the ride — and good luck with your learning journey!
 
 \begin{figure}[ht]
     \centering
-    \includegraphics[width=1\linewidth]{graphics/ai_history.png}
+    \includegraphics[width=1\linewidth]{graphics/S1History/ai_history.png}
     \caption{Contexte historique}
     \label{fig:ai-history}
 \end{figure}
@@ -133,14 +133,14 @@ La programmation 'manuelle' est un processus/algorithme qui a comme entrée des 
 
 \begin{figure}[ht]
     \centering
-    \includegraphics[width=0.5\linewidth]{graphics/ai_terms.PNG}
+    \includegraphics[width=0.5\linewidth]{graphics/S2Intro/AITerms.PNG}
     \caption{Terminologie de l'IA}
     \label{fig:ai-terms}
 \end{figure}
 
 \begin{figure}[ht]
     \centering
-    \includegraphics[width=0.7\linewidth]{graphics/ml_vs_dl.PNG}
+    \includegraphics[width=0.7\linewidth]{graphics/S2Intro/ml_vs_dl.PNG}
     \caption{Différence entre l'apprentissage machine et l'apprentissage profond}
     \label{fig:ai-terms-dl}
 \end{figure}
@@ -162,7 +162,7 @@ Le perceptron est le bloc de construction de base dans les réseaux de neurones.
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=\linewidth]{graphics/perceptron.png}
+    \includegraphics[width=\linewidth]{graphics/S2Intro/perceptron.png}
     \caption{Schéma d’un perceptron}
     \label{fig:perceptron}
 \end{figure}
@@ -196,8 +196,8 @@ Cette phase cherche la configuration optimale des paramètres dans l’espace de
 
 \begin{figure}[ht]
     \centering
-    \includegraphics[width=\linewidth]{graphics/sous-apprentissage.PNG}
-    \includegraphics[width=\linewidth]{graphics/sur-apprentissage.PNG}
+    \includegraphics[width=\linewidth]{graphics/S2Intro/sous-apprentissage.PNG}
+    \includegraphics[width=\linewidth]{graphics/S2Intro/sur-apprentissage.PNG}
     \caption{Exemple de surapprentissage (overfit) et de sous-apprentissage (underfit)}
     \label{fig:over-under-fit}
 \end{figure}
@@ -221,7 +221,7 @@ Les approches de l'apprentissage machine se classent en différentes familles :
 
 \begin{figure}[ht]
     \centering
-    \includegraphics[width=\linewidth]{graphics/learning_type.png}
+    \includegraphics[width=\linewidth]{graphics/S2Intro/learning_type.png}
     \caption{Différents types d’apprentissage}
     \label{fig:learning-types}
 \end{figure}
@@ -261,7 +261,7 @@ with
 
 \begin{figure}[ht]
     \centering
-    \includegraphics[width=\linewidth]{graphics/biais-variance.png}
+    \includegraphics[width=\linewidth]{graphics/S2Intro/biais-variance.png}
     \caption{Bias versus Variance}
     \label{fig:biais-variance}
 \end{figure}
@@ -305,7 +305,7 @@ SGD updates parameters using mini-batches:
 Le \textbf{gradient avec moment} est une méthode d'optimisation qui améliore la convergence des algorithmes de descente de gradient en ajoutant une notion d'accumulation des gradients passés. Cela aide à surmonter les oscillations et à accélérer la convergence dans des directions où le gradient varie peu. Cette méthode peut aussi être combinée avec d'autres techniques d'optimisation, comme le redémarrage à chaud et l'ajustement adaptatif du taux d'apprentissage.
 \begin{figure}[h]
     \centering
-    \includegraphics[width=1 \linewidth]{graphics/gradient_with_moment.PNG}
+    \includegraphics[width=1 \linewidth]{graphics/S3Optimisation/gradient_with_moment.PNG}
     \caption{Gradient avec moment}
     \label{fig:gradient_with_moment}
 \end{figure}
@@ -386,8 +386,8 @@ Normalization accelerates training and stabilizes gradient flow by standardizing
 
 \begin{figure}
     \centering
-    \includegraphics[width=0.4\linewidth]{graphics/batchnorm_exp01.jpg}
-    \includegraphics[width=0.4\linewidth]{graphics/batchnorm_exp02.jpg}
+    \includegraphics[width=0.4\linewidth]{graphics/S3Optimisation/batchnorm_exp01.jpg}
+    \includegraphics[width=0.4\linewidth]{graphics/S3Optimisation/batchnorm_exp02.jpg}
     \caption{Gradient landscape without and with normalization}
     \label{fig:enter-label}
 \end{figure}
@@ -543,7 +543,7 @@ Train a general model and fine-tune it for specific tasks.
 Build a general model and plug in smaller task-specific modules.
 \begin{figure}[ht]
     \centering
-    \includegraphics[width=\linewidth]{graphics/multitask-learning.jpg}
+    \includegraphics[width=\linewidth]{graphics/S4Regularisation/multitask-learning.jpg}
     \caption{Multi-Task Learning architecture}
     \label{fig:multitask-learning}
 \end{figure}
@@ -554,7 +554,7 @@ Replace hard labels (0 and 1) with smoothed values to improve generalization. Th
 
 \begin{figure}
     \centering
-    \includegraphics[width=1\linewidth]{graphics/label-smoothing.jpg}
+    \includegraphics[width=1\linewidth]{graphics/S4Regularisation/label-smoothing.jpg}
     \caption{Source: When does label smoothing help?}
     \label{fig:enter-label}
 \end{figure}
@@ -579,6 +579,8 @@ However, more aggressive augmentation techniques exist..
 \clearpage\newpage
 
 \section{Convolutional Neural Networks (CNNs)} \label{sec:cnn}
+% TODO adding something from this might be interesting : https://guandi1995.github.io/Pooling-Layers/#:~:text=In%20summary%2C%20since%20there%20are,1%20%E2%8C%8B%20%C3%97%20n%20c%20.
+
 A Convolutional Neural Network (CNN) is a type of neural network designed specifically for pattern recognition in image or audio data (mimicking the way the visual cortex processes visual information). CNNs leverage convolution operations to extract hierarchical features from images, efficiently handling high-dimensional data while exploiting spatial structures, such as the relationship between nearby pixels. This architecture builds invariance to transformations like translation, making it highly effective for image-related tasks. A typical CNN consists of alternating convolutional and pooling layers, followed by fully connected layers.
 
 \subsection{Key Features}
@@ -620,8 +622,6 @@ with zero trainable parameters. There are two main types of pooling
     \]
 \end{itemize}
 
-% TODO adding something from this might be interesting : https://guandi1995.github.io/Pooling-Layers/#:~:text=In%20summary%2C%20since%20there%20are,1%20%E2%8C%8B%20%C3%97%20n%20c%20.
-
 \subsection{Stride and Padding}
 \paragraph{Stride} Controls the step size of the convolutional filter when moving across the input.
 
@@ -634,7 +634,7 @@ with zero trainable parameters. There are two main types of pooling
 
 \begin{figure}[ht]
     \centering
-    \includegraphics[width=0.7\linewidth]{graphics/padding_cnn.png}
+    \includegraphics[width=0.7\linewidth]{graphics/S5CNN/padding_cnn.png}
     \caption{Special padding cases for a 2D convolution: to the left valid convolution (no padding), in the middle same convolution (input and output dimensions are the equal), and to the right full convolution (maximum padding).}
     \label{fig:padding-cnn}
 \end{figure}
@@ -642,7 +642,13 @@ with zero trainable parameters. There are two main types of pooling
 \subsection{Receptive Field}
 
 The \emph{receptive field} of a neuron in a convolutional neural network (CNN) is the region of the input that influences that neuron's output. As you progress deeper into the network, the receptive field generally increases, allowing the network to capture larger context. Understanding the receptive field is essential because it helps you design architectures that capture enough context from the input.
-% TODO add image of that
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=0.7\linewidth]{graphics/S5CNN/receptive_field.png}
+    \caption{Receptive field expansion in a deep CNN using consecutive $3\times3$ kernels. Source: Reza Kalantar, “Receptive Fields in Deep Convolutional Networks,” Medium (2019).}
+    \label{fig:receptive-field}
+\end{figure}
 
 In simpler terms, it is the size of the patch in the input image that contributes to a particular feature in a deeper layer. For layer \(i\) with kernel \(k_i\) and stride \(s_i\), the receptive field can be computed recursively
 \[
@@ -653,49 +659,92 @@ where \(S_{i-1} = \prod_{j=1}^{i-1} s_j\) is the effective stride. Also, for the
 r_1 = k_1.
 \]
 
-\paragraph{Example}
-\begin{itemize}
-    \item Layer 1: \(k_1 = 3\), \(s_1 = 1 \Rightarrow r_1 = 3\).
-    \item Layer 2: \(k_2 = 3\), \(s_2 = 2 \Rightarrow r_2 = 3 + 2 \times 1 = 5\).
-\end{itemize}
+\subsection{Backpropagation (TODO)}
 
-\subsection{Backpropagation}
-TODO
-%TODO Explain the backpropagation process in CNNs..
+\subsection{Dilated Convolutions}
+Dilated convolutions “inflate” the kernel by inserting spaces between its elements, thereby expanding the network’s receptive field without extra parameters or computation.
+
+They are especially useful when nearby inputs are highly redundant, and have been employed in sequence–modeling architectures such as WaveNet (see \ref{wavenet}) and ByteNet (see \ref{bytenet}).
+
+\paragraph{Dilation factor}
+A hyperparameter $d\ge1$ that inserts $d-1$ “holes” between successive kernel elements.
+
+\paragraph{Effective kernel size}
+Denote the original kernel size by $k$.  A dilated kernel of size $k$ and rate $d$ has an effective size
+\[
+\hat k
+= k + (k-1)\,(d-1)
+= d\,(k-1) + 1.
+\]
+Larger $\hat k$ directly increases the receptive field.
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=0.3\linewidth]{graphics/S5CNN/dilated_conv.png}
+    \caption{Dilated convolution with $i=7$, kernel $k=3$, dilation rate $d=2$, stride $s=1$, and padding $p=0$, yielding an effective kernel size $\hat k = 5$.}
+    \label{fig:dilated-conv}
+\end{figure}
 
 \subsection{CNN Variants}
 
 \subsubsection{ResNet (Residual Networks)}
 Deep networks suffer from the \textit{vanishing gradient problem}, where gradients become too small to update weights effectively. ResNet introduces skip connections, allowing layers to learn residual mappings:
 \[
-F(x) = H(x) - x
+F(x) = H(x) - x,
 \]
-where $H(x)$ is the desired mapping.
+where $H(x)$ is the desired underlying mapping. This enables stable training of very deep models (e.g.\ ResNet‑50, ResNet‑152).
 
-This technique enables the training of very deep networks (e.g., ResNet-50, ResNet-152).
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=0.35\linewidth]{graphics/S5CNN/ResBlock.png}
+    \caption{Structure of a ResNet residual block. The input $x$ is added to the output of the residual function $F(x)$ via a skip connection.}
+    \label{fig:resnet-resblock}
+\end{figure}
 
-There are two type of residual blocks
+There are two types of residual blocks:
 
-\paragraph{Basic Block} TODO
-\paragraph{Bottleneck Block} TODO
+\paragraph{Basic Block}
+Used in shallower ResNets (e.g.\ ResNet‑18/34). It consists of two $3\times3$ convolutions, each followed by BatchNorm and ReLU, plus an identity shortcut.
+
+\paragraph{Bottleneck Block}
+Used in deeper variants (e.g.\ ResNet‑50/101/152). It stacks a $1\times1$ projection (reduce channels), a $3\times3$ convolution, and a $1\times1$ expansion, all with BatchNorm and ReLU, plus a shortcut.
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=0.65\linewidth]{graphics/S5CNN/res_blocks_type.png}
+    \caption{Comparison of ResNet block types. 
+    \textbf{Left}: basic block (two 3×3 convolutions).}
+    \label{fig:resnet-block-types}
+    \textbf{Right}: bottleneck block (1×1, 3×3, 1×1 convolutions);
+\end{figure}
 
 \subsubsection{SENet (Squeeze-and-Excitation Networks)}
-SENet introduces a channel-wise attention mechanism.
+SENet introduces a lightweight channel‑wise attention mechanism:
 \begin{enumerate}
-    \item \textbf{Squeeze:} Global average pooling condenses spatial information.
-    \item \textbf{Excitation:} A small fully connected network learns per-channel weights.
-    \item \textbf{Recalibration:} Multiplies channel-wise weights with the input feature map.
+    \item \textbf{Squeeze:} Global average pooling produces a per‑channel descriptor.
+    \item \textbf{Excitation:} Two small FC layers (with bottleneck) learn channel weights via a sigmoid.
+    \item \textbf{Recalibration:} These weights rescale the original feature maps.
 \end{enumerate}
-This enhances feature representation with minimal computational cost.
+This adaptively emphasises informative channels with minimal cost.
 
-\subsubsection{Dilated Convolutions}
-Useful when spatial redundancy is high. Expands the receptive field without increasing computational cost.
+\subsubsection{WaveNet}\label{wavenet}
+A generative model for raw audio signals. WaveNet stacks causal, dilated $1$D convolutions with exponentially increasing dilation rates, interleaved with gated activations and residual/skip connections. It models long-range dependencies without recurrence and outputs sample‑by‑sample distributions via a softmax over quantised amplitudes.
+
+\subsubsection{ByteNet}\label{bytenet}
+A fully convolutional sequence‑to‑sequence model for text. ByteNet uses two stacks of dilated convolutions: an encoder to build representations of the source sequence, and an autoregressive decoder that conditions on previous outputs. Residual connections and causal masking ensure efficient, parallelisable training and linear inference time.
 
 \subsubsection{EfficientNet}
-\textit{TODO: Explanation needed.}
+EfficientNet achieves state‑of‑the‑art accuracy through \emph{compound scaling}: jointly scaling network depth, width, and input resolution by a set of coefficients found via small‑grid search. It builds on MobileNetV2’s MBConv blocks (inverted residual + squeeze‑and‑excitation) to maximise performance per FLOP.
 
 \subsubsection{ConvNeXt}
-\textit{TODO: Explanation needed.}
+ConvNeXt modernises the classic CNN by incorporating design elements inspired by Vision Transformers:  
+\begin{itemize}
+  \item Replace $3\times3$ convs with large‑kernel depth‑wise convs (e.g.\ $7\times7$).
+  \item Use LayerNorm in “channels-last” format.
+  \item Swap ReLU+BN for GELU+LayerNorm.
+  \item Maintain a simple macro‑architecture (ResNet‑style stages and downsampling).
+\end{itemize}
+These changes yield competitive accuracy on ImageNet with similar compute to large transformer models.
 
 % =============================================================
 \section{Recurrent Neural Networks (RNNs)}
@@ -746,7 +795,7 @@ In other words, the parameter \( T \) influences the attention distribution:
 \subsection{Transformer Variants}
 \begin{figure}[h!]
     \centering
-    \includegraphics[width=\linewidth]{graphics/transformers_architectures.jpg}
+    \includegraphics[width=\linewidth]{graphics/S7Transformers/transformers_architectures.jpg}
     \caption{Architecture des Transformers. Source : \textit{BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding} (Devlin et al.)}
     \label{fig:transformers_architecture}
 \end{figure}
