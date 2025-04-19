@@ -685,6 +685,34 @@ Larger $\hat k$ directly increases the receptive field.
     \label{fig:dilated-conv}
 \end{figure}
 
+\subsection{Transpose Convolutions}
+Transpose convolutions (also called “deconvolutions”) is the natural “inverse” of the convolution operation. It perform learnable upsampling by reversing the forward pass of a convolution. They are widely used in decoder architectures for image generation or semantic segmentation.  
+
+\subsection{Separable Convolutions}
+Separable convolutions factorize a standard convolution into two smaller operations—depthwise and pointwise—to reduce parameters and computation.
+
+\paragraph{Depthwise convolution}
+Applies a $k\times k$ filter to each input channel separately:
+\[
+\text{FLOPs}_{\mathrm{dw}}
+= H_{\mathrm{in}}W_{\mathrm{in}} \,\times\,k^2\,C_{\mathrm{in}}.
+\]
+
+\paragraph{Pointwise convolution}
+Follows with a $1\times1$ convolution to linearly combine the $C_{\mathrm{in}}$ channels into $C_{\mathrm{out}}$:
+\[
+\text{FLOPs}_{\mathrm{pw}}
+= H_{\mathrm{in}}W_{\mathrm{in}} \,\times\,C_{\mathrm{in}}\,C_{\mathrm{out}}.
+\]
+
+\paragraph{Parameter reduction}
+Compared to a standard $k\times k$ convolution ($k^2C_{\mathrm{in}}C_{\mathrm{out}}$ parameters), depthwise separable uses
+\[
+k^2C_{\mathrm{in}} \;+\; C_{\mathrm{in}}C_{\mathrm{out}},
+\]
+often yielding a 5–10× reduction in computation for typical network widths.
+
+
 \subsection{CNN Variants}
 
 \subsubsection{ResNet (Residual Networks)}
@@ -747,6 +775,8 @@ ConvNeXt modernises the classic CNN by incorporating design elements inspired by
 These changes yield competitive accuracy on ImageNet with similar compute to large transformer models.
 
 % =============================================================
+\clearpage\newpage
+
 \section{Recurrent Neural Networks (RNNs)}
 \textit{TODO: Explanation needed.}
 % TODO: Provide an overview of RNNs and include references (e.g., Colah's blog).
@@ -860,6 +890,12 @@ Transformer-XL étend le modèle autoregressif en introduisant une récursion au
 
 \subsubsection{T5 (Text-to-Text Transfer Transformer)}
 T5 adopte une approche encodeur-décodeur en formulant toutes les tâches NLP comme un problème de conversion de texte en texte. Il est particulièrement efficace pour des tâches telles que la traduction, le résumé et la question-réponse. Sa flexibilité en fait un modèle très pertinent dans de nombreux contextes d'applications actuels.
+
+\subsubsection{VIT}
+TODO
+
+\subsubsection{SWIN}
+TODO
 
 % =============================================================
 \clearpage\newpage
