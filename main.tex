@@ -202,6 +202,23 @@ Cette phase cherche la configuration optimale des paramètres dans l’espace de
     \label{fig:over-under-fit}
 \end{figure}
 
+\subsubsection{Bias-Variance Tradeoff}
+The overall error can be decomposed as:
+\[
+\text{Total Error} = \text{Bias}^2 + \text{Variance} + \sigma^2,
+\]
+with
+\[
+\text{Bias}[\tilde{f}] = E[\tilde{f}] - f \quad \text{and} \quad \text{Variance}[\tilde{f}] = E\big[(\tilde{f} - E[\tilde{f}])^2\big].
+\]
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=0.7\linewidth]{graphics/S2Intro/biais-variance.png}
+    \caption{Bias-Variance Tradeoff}
+    \label{fig:biais-variance}
+\end{figure}
+
 \subsection{Types de Problèmes}
 
 \begin{itemize}
@@ -248,23 +265,6 @@ Depending on the level of bias imposed on the modele, we get different results.
     \item \textbf{Strong Inductive Bias:} Imposes strong assumptions for faster learning but reduced flexibility (e.g., linear regression).
     \item \textbf{Weak Inductive Bias:} Fewer assumptions allow greater flexibility but require more data (e.g., deep neural networks).
 \end{itemize}
-
-\subsection{Bias-Variance Tradeoff}
-The overall error can be decomposed as:
-\[
-\text{Total Error} = \text{Bias}^2 + \text{Variance} + \sigma^2,
-\]
-with
-\[
-\text{Bias}[\tilde{f}] = E[\tilde{f}] - f \quad \text{and} \quad \text{Variance}[\tilde{f}] = E\big[(\tilde{f} - E[\tilde{f}])^2\big].
-\]
-
-\begin{figure}[ht]
-    \centering
-    \includegraphics[width=\linewidth]{graphics/S2Intro/biais-variance.png}
-    \caption{Bias versus Variance}
-    \label{fig:biais-variance}
-\end{figure}
 
 % =============================================================
 \clearpage\newpage
@@ -713,7 +713,7 @@ k^2C_{\mathrm{in}} \;+\; C_{\mathrm{in}}C_{\mathrm{out}},
 often yielding a 5–10× reduction in computation for typical network widths.
 
 
-\subsection{CNN Variants}
+\subsection{Architectural Taxonomy}
 
 \subsubsection{ResNet (Residual Networks)}
 Deep networks suffer from the \textit{vanishing gradient problem}, where gradients become too small to update weights effectively. ResNet introduces skip connections, allowing layers to learn residual mappings:
@@ -822,7 +822,7 @@ In other words, the parameter \( T \) influences the attention distribution:
 \end{itemize}
 
 
-\subsection{Transformer Variants}
+\subsection{Architectural Taxonomy}
 \begin{figure}[h!]
     \centering
     \includegraphics[width=\linewidth]{graphics/S7Transformers/transformers_architectures.jpg}
@@ -954,7 +954,7 @@ z = \mu(x) + \sigma(x)\epsilon, \quad \epsilon \sim \mathcal{N}(0, I)
 \]
 This neat transformation allows us to treat the random sampling as a differentiable operation.
 
-\subsection{VAE Variants}
+\subsection{Architectural Taxonomy}
 
 \subsubsection{VAE-IAF}
 To achieve a richer posterior, we apply a series of invertible transformations:
@@ -976,7 +976,115 @@ For sequential data, stochastic variational recurrent networks incorporate laten
 % =============================================================
 \clearpage\newpage
 
-\section{Diffusion models}
+\section{Generative Adversarial Networks (GANs)} \label{sec:gan}
+
+TODO
+
+% =============================================================
+\clearpage\newpage
+
+\section{Normalizing Flows} \label{sec:flows}
+
+Normalizing flows are a powerful class of generative models that transform complex distributions into simpler, known distributions, and vice versa, through a series of invertible transformations. These models are particularly advantageous due to their ability to compute the exact likelihood of the data, a challenging task for many other generative models like GANs and VAEs. By applying a sequence of invertible mappings to a simple base distribution (often Gaussian), normalizing flows allow for efficient density estimation and generative modeling. 
+
+The golden age of normalizing flows occurred between the eras of \textbf{Generative Adversarial Networks (GANs)} (see \ref{sec:gan}) and \textbf{Diffusion Models} (see \ref{sec:diffusion}). During this period, normalizing flows were at the forefront of generative modeling, as they were capable of learning complex distributions while maintaining tractable likelihood estimation. This made them a valuable tool for tasks like density estimation, generative modeling, and variational inference. However, their popularity has been somewhat overshadowed by the rise of diffusion models in recent years. Nevertheless, normalizing flows remain a valuable tool for modeling complex data distributions efficiently.
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=0.75\linewidth]{graphics/S9Flows/space_transformations.png}
+    \caption{Visualization of normalizing flows: The top part shows the inference process where data points in the data space \(X\) are transformed into the latent space \(Z\) through the invertible transformation \(f\). The bottom part illustrates the generation process, where samples are drawn from the latent space \(Z\) and mapped back to the data space \(X\) using the inverse transformation \(f^{-1}\).}
+    \label{fig:space-transformations}
+\end{figure}
+
+\subsection{Change of Variables and the Jacobian Determinant}
+Given an invertible transformation \( f \) that maps an input \( x \) from a base distribution \( p_X(x) \) to a transformed space \( y = f(x) \), the probability density function \( p_Y(y) \) of the transformed variable can be computed using the \textbf{change of variables formula}:
+
+\[
+p_Y(y) = p_X(x) \left| \det \frac{d f(x)}{dx} \right|
+\]
+
+Where:
+\begin{itemize}
+    \item \( p_X(x) \) is the probability density of the base distribution,
+    \item \( \frac{d f(x)}{dx} \) is the Jacobian matrix of the transformation \( f \),
+    \item \( \left| \det \frac{d f(x)}{dx} \right| \) is the absolute value of the determinant of the Jacobian, which accounts for how the transformation scales volumes in the data space.
+\end{itemize}
+
+This formula allows us to compute the likelihood of data under the transformed distribution \( p_Y \), which is a central task in generative modeling.
+
+\subsection{Criteria for Designing Normalizing Flows}
+When designing normalizing flows, there are key criteria to consider:
+
+
+\textbf{Invertible Architecture:} The architecture must be invertible to ensure that the transformation between the data space and the latent space is bijective. This can be achieved using structures like \textbf{coupling layers} or \textbf{autoregressive transformations}.
+
+\textbf{Efficient Computation of the Change of Variables Equation:} The Jacobian determinant, which is critical for calculating the likelihood, must be efficiently computed. This ensures that normalizing flows can scale to high-dimensional data and complex distributions. The likelihood is computed using the formula:
+
+\[
+\log p_{\text{model}}(x) = \log p_Y(f(x)) + \log \left| \det \frac{d f(x)}{dx} \right|
+\]
+
+Where \( p_{\text{model}}(x) \) represents the model distribution, and \( p_Y(f(x)) \) is the base distribution.
+
+The key property that allows normalizing flows to work effectively is that neural networks are composed of functions that can be chained together. This compositional structure ensures that the transformation from the data space to the latent space (and vice versa) remains invertible, as long as each individual function in the chain is invertible. By using this property, normalizing flows can learn complex transformations while preserving the ability to compute exact likelihoods, making them powerful tools for density estimation and generative modeling.
+
+\subsection{Training Normalizing Flows}
+Training normalizing flows involves maximizing the likelihood of the data under the transformed distribution. This is done by minimizing the negative log-likelihood, which can be written as:
+
+\[
+\mathcal{L}(\theta) = -\sum_{i=1}^N \log p_Y(y_i)
+\]
+
+Where \( y_i = f(x_i) \) is the transformed data and \( \theta \) represents the parameters of the flow.
+
+The likelihood is computed using the change of variables formula, and the parameters are optimized using gradient-based methods.
+
+\subsection{Architectural Taxonomy}
+There are various architectures for normalizing flows, each designed to ensure invertibility and enable efficient computation of the Jacobian determinant. Some notable models include:
+
+\subsubsection{Planar Flows}
+Planar flows are a simple class of flows where the transformation \( f \) is parameterized as:
+
+\[
+f(x) = x + u \, \tanh(Wx + b)
+\]
+
+Where \( u \), \( W \), and \( b \) are learned parameters. The Jacobian determinant for planar flows can be computed exactly, making them an attractive choice for simple tasks.
+
+\subsubsection{RealNVP (Real-valued Non-Volume Preserving)}
+RealNVP employs a coupling layer where the input is split into two parts: one part is transformed using a simple neural network, while the other is left unchanged. The transformation ensures that the Jacobian determinant is easy to compute. The general form of the transformation is:
+
+\[
+y_1 = x_1, \quad y_2 = x_2 \odot \exp(s(x_1)) + t(x_1)
+\]
+
+Where \( s(x_1) \) and \( t(x_1) \) are scale and translation functions, respectively, and \( \odot \) denotes element-wise multiplication.
+
+\subsubsection{Glow (Generative Flow with Invertible 1x1 Convolutions)}
+Glow extends RealNVP by using invertible 1x1 convolutions, allowing for a more flexible transformation of the data. This allows the model to perform better on high-dimensional data while maintaining efficient computation of the likelihood.
+
+\subsubsection{Invertible Residual Networks (i-ResNets)}
+Invertible Residual Networks (i-ResNets) extend residual networks to ensure invertibility. They are particularly useful for modeling high-dimensional data, as they offer efficient training and likelihood computation. The transformation in i-ResNets is parameterized by:
+
+\[
+y = x + f(x; \theta)
+\]
+
+Where \( f(x; \theta) \) is a residual function that is designed to be invertible.
+
+\subsection{Applications of Normalizing Flows}
+
+\begin{itemize}
+    \item \textbf{Density Estimation:} Learning complex distributions directly from data.
+    \item \textbf{Generative Modeling:} Sampling from complex distributions, such as image and audio generation.
+    \item \textbf{Anomaly Detection:} Using the model's likelihood to detect outliers in data.
+    \item \textbf{Variational Inference:} Approximating complex posterior distributions in Bayesian inference.
+\end{itemize}
+
+% =============================================================
+\clearpage\newpage
+
+\section{Diffusion models} \label{sec:diffusion}
 
 % TODO This section needs lots of love and improvements. (I need to summarize my notes and clean them up!)
 
