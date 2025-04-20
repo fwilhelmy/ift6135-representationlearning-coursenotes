@@ -8,10 +8,11 @@
 \usepackage{url}              % URL formatting
 \usepackage{forest}           % For drawing trees
 \usepackage{hyperref}         % For hyperlinks
-\usepackage{tikz}             % For drawing diagrams
 \usepackage{algorithm}        % For pseudocode algorithms
 \usepackage{algpseudocode}    % For pseudocode
 \usetikzlibrary{quantikz2}    % For Quantum circuit diagrams
+\usepackage{tikz}             % For drawing diagrams
+\usetikzlibrary{calc, shapes.geometric, arrows, positioning}
 \setlength{\parindent}{0cm}
 \addtolength{\oddsidemargin}{-2cm}
 \addtolength{\evensidemargin}{-2cm}
@@ -160,7 +161,7 @@ Le perceptron est le bloc de construction de base dans les réseaux de neurones.
     \item \textbf{La fonction d'activation (\(F\)) :} introduit la non-linéarité en activant ou désactivant le neurone selon l’agrégation pondérée des entrées.
 \end{enumerate}
 
-\begin{figure}[H]
+\begin{figure}[ht]
     \centering
     \includegraphics[width=\linewidth]{graphics/S2Intro/perceptron.png}
     \caption{Schéma d’un perceptron}
@@ -283,7 +284,7 @@ In this section, we will mostly focus on first-order gradient-based methods.
 \subsection{Optimizers}
 \subsubsection{Stochastic Gradient Descent (SGD)}
 SGD updates parameters using mini-batches:
-\begin{algorithm}[H]
+\begin{algorithm}[ht]
 \caption{Stochastic Gradient Descent}
 \begin{algorithmic}[1]
     \State \textbf{Input:} Learning rate \(\eta\), initial parameter \(\theta\)
@@ -303,7 +304,7 @@ SGD updates parameters using mini-batches:
 
 \subsubsection{Momentum}
 Le \textbf{gradient avec moment} est une méthode d'optimisation qui améliore la convergence des algorithmes de descente de gradient en ajoutant une notion d'accumulation des gradients passés. Cela aide à surmonter les oscillations et à accélérer la convergence dans des directions où le gradient varie peu. Cette méthode peut aussi être combinée avec d'autres techniques d'optimisation, comme le redémarrage à chaud et l'ajustement adaptatif du taux d'apprentissage.
-\begin{figure}[h]
+\begin{figure}[ht]
     \centering
     \includegraphics[width=1 \linewidth]{graphics/S3Optimisation/gradient_with_moment.PNG}
     \caption{Gradient avec moment}
@@ -389,7 +390,7 @@ Normalization accelerates training and stabilizes gradient flow by standardizing
     \includegraphics[width=0.4\linewidth]{graphics/S3Optimisation/batchnorm_exp01.jpg}
     \includegraphics[width=0.4\linewidth]{graphics/S3Optimisation/batchnorm_exp02.jpg}
     \caption{Gradient landscape without and with normalization}
-    \label{fig:enter-label}
+    \label{fig:batchnorm}
 \end{figure}
 
 Normalizing inputs (or activations) helps reduce the impact of differing value ranges, smoothing the loss landscape and improving gradient flow.
@@ -786,7 +787,7 @@ These changes yield competitive accuracy on ImageNet with similar compute to lar
 % =============================================================
 \clearpage\newpage
 
-\section{Transformers}
+\section{Transformers} \label{sec:transformers}
 Transformers are effective for language modeling due to their ability to process data in parallel and capture long-range dependencies through attention.
 
 Here are some key points when fine-tuning this type of model:
@@ -823,7 +824,7 @@ In other words, the parameter \( T \) influences the attention distribution:
 
 
 \subsection{Architectural Taxonomy}
-\begin{figure}[h!]
+\begin{figure}[ht]
     \centering
     \includegraphics[width=\linewidth]{graphics/S7Transformers/transformers_architectures.jpg}
     \caption{Architecture des Transformers. Source : \textit{BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding} (Devlin et al.)}
@@ -877,8 +878,6 @@ Several improved versions of BERT have been introduced over the years.
 \paragraph{ALBERT} Reduces parameter size using factorized embeddings and cross-layer parameter sharing.
 
 \paragraph{DistilBERT} A smaller, faster, and more efficient variant of BERT with fewer layers.
-
-\\
 
 That said, at the moment there isn't much followup on that model as all research are going toward decorder only style architectures like ChatGPT and company. That said, Prof. Aaron mentioned that if he had to bet what is the futur for LLMs in long term, he thinks BERT is because of it's much better performance for same model size.
 
@@ -1198,11 +1197,13 @@ Instead of using a human in the feed-back-loop, we can use a LLM to judge the aw
 
 Here are some notes on that:
 - Models are heavily positionally biased
-- Models often rate on syntax & response length
+- Models often rate on syntax \& response length
 
 \subsection{Benchmarks and comparisons}
+TODO
 
 \subsubsection{MT Bench}
+TODO
 
 % ============================================================
 \clearpage\newpage
