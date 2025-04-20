@@ -1351,98 +1351,6 @@ Les modele de diffusion discret opperere sur les nombres reel??
 
 Toujours chain de markov
 
-% =============================================================
-\clearpage\newpage
-
-\section{Reinforcement Learning}
-% TODO: Add notes and video references on reinforcement learning.
-
-\subsection{Reward Hacking}
-
-\subsection{Markov Decision Process}
-
-\subsection{Policies}
-
-\subsection{Bellman Equations}
-
-\subsection{Value-Based RL}
-
-\subsubsection{Goal} Learn value functions
-
-\subsubsection{Policy} You derive the policy from the value function, typically by choosing the action with the highest value (greedy policy).
-
-\subsubsection{Q-Learning}
-
-\subsubsection{Deep Q-Learning}
-
-\subsection{Policy-Based RL}
-
-\subsubsection{Goal} Learn policy parameters
-
-\subsubsection{Policy} You directly learn a parameterized policy (e.g., neural network) that outputs actions or action probabilities.
-
-\subsection{Actor-Critic}
-
-\subsubsection{Policy} You learn both a policy (the actor) and a value function (the critic). The actor selects actions, while the critic evaluates them.
-
-% =============================================================
-\clearpage\newpage
-
-\section{Reinforcement Learning from Human Feedback (RLHF)}
-
-Language models are not aligned with user intent [Ouyang et al., 2022]. Finetuning can help!
-
-There are two steps to this situation.
-
-First step is pretraining on language modeling (lots of text; learn general things!)
-
-Second step is fietuning with human feedback (many tasks, many labels, adapt to the tasks!)
-
-We can generally do two type of finetuning. One is supervised training and the other by reinforcement (RLHF).
-
-\subsection{Flan-T5}
-
-\subsection{Limitations of Finetuning}
-
-One problem is that we have open-ended questions that are difficult to evaluate what is "good" and what is "bad". Especially in creative tasks. If we finetune too much on those tasks there will be overfitting quickly.
-
-Another problem is that language modeling penalizes all token-level mistakes equally, but some errors are worse than others.
-
-For exemple when you evaluate the output of the model, we will use cross-entropy based on the probabilities output of the model. Why it doesn't punish the model too much even if he output a synonym is that in the probabilities, the synonimes will generally both at the same \%. Therefor the model is not too much punished.
-
-\subsection{Human-in-the-loop}
-
-This method is by far the best way to finetune models but there are some big problems with this technique too.
-
-One of the main problem is that this process is expensive. The solution that companies have been using is to model their preferences as a separate (NLP) problem. [Knox and Stone, 2009]
-- One exemple is chatgpt options to thumbs up/down the awnsers, regenerate awnsers and make the user choose between two awnsers.
-
-Another problem is that human judgment is noisy and misscalibrated. A solution that was found was that instead of asking for direct ratings, the system should ask for pairwise comparisons, which can be more reliable. [Phelps et al., 2015; Clark et al., 2018]
-
-\subsection{Reward }
-Almost always this for RLHF
-
-\subsection{InstructGPT}
-Step 1 (Supervised training): Collect demonstration data and train a supervised policy.
-Step 2... 
-Step 3...
-
-\subsection{LLM-as-a-judge}
-
-- PAS UTILISER POUR REINFORCEMENT!! JUST BENCHMARKING
-
-Instead of using a human in the feed-back-loop, we can use a LLM to judge the awnsers. This method has been increasing in popularity in recent years. We generally choose the biggest model to make the judgments on the awnsers.
-
-Here are some notes on that:
-- Models are heavily positionally biased
-- Models often rate on syntax \& response length
-
-\subsection{Benchmarks and comparisons}
-TODO
-
-\subsubsection{MT Bench}
-TODO
-
 % ============================================================
 \clearpage\newpage
 
@@ -1547,5 +1455,119 @@ Contrastive methods and their extensions drive learning by comparing different v
 Methods like DINO utilize a teacher--student formulation in a label-free setting, where the student is trained to mimic the softened outputs of the teacher.
 
 This process generally enhances feature robustness and improves transferability by internalizing richer representations.
+
+% =============================================================
+\clearpage\newpage
+
+\section{Reinforcement Learning}
+% TODO: Add notes and video references on reinforcement learning.
+
+\subsection{Reward Hacking}
+
+\subsection{Markov Decision Process}
+
+\subsection{Policies}
+
+\subsection{Bellman Equations}
+
+\subsection{Value-Based RL}
+
+\subsubsection{Goal} Learn value functions
+
+\subsubsection{Policy} You derive the policy from the value function, typically by choosing the action with the highest value (greedy policy).
+
+\subsubsection{Q-Learning}
+
+\subsubsection{Deep Q-Learning}
+
+\subsection{Policy-Based RL}
+
+\subsubsection{Goal} Learn policy parameters
+
+\subsubsection{Policy} You directly learn a parameterized policy (e.g., neural network) that outputs actions or action probabilities.
+
+\subsection{Actor-Critic}
+
+\subsubsection{Policy} You learn both a policy (the actor) and a value function (the critic). The actor selects actions, while the critic evaluates them.
+
+% =============================================================
+\clearpage\newpage
+\section{RLHF}
+% TODO I wanna rework the steps based on my personnal notes... No time right now, but let's revisite this and give a more general description of the steps.
+
+Reinforcement Learning from Human Feedback (RLHF) is a methodology for aligning large language models (LLMs) with human values and preferences. It builds on unsupervised pretraining and supervised instruction tuning, adding a learned reward model from human judgments and a reinforcement learning–based policy optimization to produce models that generate fluent text that also reflect user intent.
+
+Although supervised fine‑tuning can teach an LLM to follow instructions, RLHF directly optimizes model behavior according to human feedback, closing the gap between likelihood and actual preference.
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=0.95\linewidth]{graphics/S11RLHF/rlhf.jpg}
+    \caption{Schematic of the RLHF pipeline. Taken from AWS.}
+    \label{fig:rlhf-pipeline}
+\end{figure}
+
+\subsection{Pretraining (Step 0)}
+
+Pretraining initializes a Transformer by minimizing the next‑token prediction loss over massive unlabeled text:
+\[
+  \mathcal{L}_{\mathrm{LM}}(\theta) = -\sum_{t=1}^n \log p_\theta(x_t \mid x_{1:t-1}).
+\]
+This builds broad linguistic knowledge and yields parameters \(\theta\) that serve as the foundation for all subsequent adaptation.
+
+\subsection{Supervised Fine‑Tuning (Step 1)}
+
+Supervised fine‑tuning adapts the pretrained LLM on a corpus of \((\text{instruction},\text{response})\) pairs.  We minimize
+\[
+  \mathcal{L}_{\mathrm{SFT}}(\theta) = -\mathbb{E}_{(i,r)\sim\mathcal{D}}\bigl[\log p_\theta(r\mid i)\bigr].
+\]
+This stage teaches the model to follow explicit instructions, yielding strong zero‑ and few‑shot capabilities across diverse tasks.
+
+\subsection{Reward Model Training (Step 2)}
+
+To capture fine‑grained human preferences, we collect pairwise comparisons \(s_w \succ s_l\) over multiple candidate responses \(s\). A reward model \(R_\phi(s)\) is then trained via the Bradley–Terry loss:
+\[
+  J_{\mathrm{RM}}(\phi) = -\mathbb{E}_{(s_w,s_l)}\bigl[\log \sigma\bigl(R_\phi(s_w)-R_\phi(s_l)\bigr)\bigr].
+\]
+Once trained, \(R_\phi\) provides a scalar score predicting which outputs humans prefer.
+
+\subsection{Policy Optimization (Step 3)}
+
+Starting from the supervised model \(p_\theta\), we perform reinforcement learning to maximize expected reward while constraining divergence from the pretrained distribution \(p_{\mathrm{PT}}\):
+\[
+  J(\theta) = \mathbb{E}_{s\sim p_\theta}[R_\phi(s)] - \beta\,\mathrm{KL}\bigl[p_\theta \,\|\, p_{\mathrm{PT}}\bigr],
+\]
+equivalent to optimizing a modified reward
+\[
+  \widetilde R(s) = R_\phi(s) - \beta\,\log\frac{p_\theta(s)}{p_{\mathrm{PT}}(s)}.
+\]
+We use Proximal Policy Optimization (PPO), employing the clipped surrogate objective to ensure stable updates under the KL constraint.
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=0.65\linewidth]{graphics/S11RLHF/performance_rlhf.png}
+    \caption{Human preference rates for summaries by model size: pretrained‑only (\(p^{PT}\)), supervised fine‑tuning (\(p^{IFT}\)), and RLHF (\(p^{RL}\)). RLHF outperforms and scales more effectively. (Stiennon et al., 2020)}
+    \label{fig:performance-rlhf}
+\end{figure}
+
+\subsection{Evaluating the Models}
+
+Human evaluation remains the gold standard but is expensive and time‑consuming. To reduce reliance on costly annotations, “RL from AI feedback” uses a strong LLM (e.g., GPT‑4) to generate or judge comparisons at scale. While faster, LLM‑as‑judge suffers from positional biases and may propagate model blind spots. Open‑ended creative tasks further challenge reward calibration, as there is no single “correct” answer and cross‑entropy penalties may under‑penalize synonyms.
+
+\subsection{InstructGPT (Scaling RLHF)}
+
+InstructGPT demonstrates RLHF’s scalability to tens of thousands of tasks. By collecting around 30 000 diverse human‑written instructions and pairwise comparisons, then executing the full RLHF pipeline, InstructGPT achieves robust instruction following across domains. It delivers consistent performance gains on held‑out benchmarks, higher user satisfaction, and improved safety compared to pure supervised tuning.
+
+\subsection{DeepSeek‑R1}
+
+DeepSeek‑R1 pushes RLHF further by starting from pure reinforcement learning on the base model—DeepSeek‑R1‑Zero—using Group Relative Policy Optimization to induce emergent reasoning without any initial supervised tuning. To enhance coherence and correctness, a small cold‑start chain‑of‑thought corpus is introduced for supervised fine‑tuning, followed by RL stages combining accuracy and format rewards. A rejection sampling pass then expands the supervised dataset with high‑quality synthetic examples, and a final PPO stage refines both reasoning depth and presentation polish.
+
+An \emph{Aha Moment} occurs when the model spontaneously “reflects” on its own reasoning chain—identifying and correcting its own mistakes—illustrating how carefully designed reward incentives can elicit sophisticated, self‑improving behaviors.
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=0.8\linewidth]{graphics/S11RLHF/aha.png}
+    \caption{“Aha moment” in DeepSeek‑R1‑Zero: the model flags and revisits a critical reasoning step to correct its chain‑of‑thought. (Aaron Courville’s IFT6135)}
+    \label{fig:aha-moment}
+\end{figure}
 
 \end{document}
