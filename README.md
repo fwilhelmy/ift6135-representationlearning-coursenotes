@@ -44,9 +44,6 @@ This document contains several parts that are incomplete and/or need to be devel
 - **Weight Standardization:** Introduce the technique, its objective, and its benefits over traditional methods.
 - **Learning Rate Decay:** I'm not sure where to place this concept and it would be helpful to develop a comprehensive explanation of the topic.
 
-### Section 4: Convolutional Neural Networks (CNNs)
-- **(De)convolution & Spatial Separable Convolution**
-
 ### Language Models (LLMs)
 I think including some notes specific to the LLMs models could be interesting but I'm not sure where to place them.. This could include discussions about
 - **Challenges**
@@ -56,5 +53,8 @@ I think including some notes specific to the LLMs models could be interesting bu
 ###  Section 8: Variational Autoencoders (VAEs)
 - **Challenges and Techniques:** Aaron talked a lot about the different challenges of VAEs and techniques to adress them. It would be interesting to add more details about this.
 
-###  Section 9, 10, 11
-These sections are basically empty at the moment and need a lot of work.
+###  Section that needs a lot of work
+- RNNs
+- Diffusion Models
+- RLHF
+- SSL
