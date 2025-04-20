@@ -55,5 +55,4 @@ I think including some notes specific to the LLMs models could be interesting bu
 
 ###  Section that needs a lot of work
 - Diffusion Models
-- RLHF
 - SSL
