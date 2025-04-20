@@ -778,11 +778,249 @@ These changes yield competitive accuracy on ImageNet with similar compute to lar
 % =============================================================
 \clearpage\newpage
 
-\section{Recurrent Neural Networks (RNNs)}
-\textit{TODO: Explanation needed.}
-% TODO: Provide an overview of RNNs and include references (e.g., Colah's blog).
-% https://colah.github.io/posts/2014-07-NLP-RNNs-Representations/
-% https://colah.github.io/posts/2015-08-Understanding-LSTMs/
+\section{Recurrent Neural Networks (RNN)}
+
+Recurrent Neural Networks (RNNs) are a class of neural networks specifically designed to handle sequential data, making them ideal for tasks such as language modeling, speech recognition, and machine translation. Their strength lies in their ability to maintain a persistent hidden state across time steps, allowing them to capture temporal dependencies within the data. Despite their early success, RNNs have been largely overshadowed by transformers (see \ref{sec:transformers}), which have proven to be more efficient and effective in handling long-range dependencies and parallel computation.
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=0.6\linewidth]{graphics/S6RNN/rnn-unrolledrnn.png}
+    \caption{Unrolled recurrent neural network over multiple time steps, depicting hidden state propagation and input–output dependencies in an audio‑visual speech recognition model. Source: Feng et al. (2017).}
+    \label{fig:unrolled-rnn}
+\end{figure}
+
+RNNs process sequential data by maintaining a hidden state that evolves over time. At each time step \(t\), the hidden state \(h_t\) is updated based on the previous hidden state \(h_{t-1}\) and the current input \(x_t\):
+\[
+h_t = f(h_{t-1}, x_t)
+\]
+
+The output \(y_t\) is then computed from the hidden state:
+\[
+y_t = \text{softmax}(W h_t + b)
+\]
+where \(W\) is the weight matrix and \(b\) is the bias term. 
+
+This recurrence allows the model to retain information from earlier time steps, making it suitable for tasks where context plays a crucial role in understanding the sequence.
+
+\subsection{Backpropagation Through Time (BPTT)}
+Backpropagation Through Time (BPTT) is the method used to train RNNs by applying backpropagation to the unrolled network over time. The network is "unrolled" for the number of time steps corresponding to the input sequence. The gradients are computed and propagated backward through the unrolled graph.
+
+\subsubsection{Truncated BPTT}
+Truncated BPTT is a practical modification where, instead of unrolling the network for the entire sequence, the network is unrolled for a fixed number of time steps, \(k\). This approximation helps reduce computational complexity and memory usage, especially when dealing with long sequences. Truncated BPTT also helps mitigate issues like vanishing gradients by limiting the range over which gradients are propagated.
+
+\subsection{Exploding Gradient Problem}
+The exploding gradient problem occurs when the gradients grow exponentially during backpropagation. This is typically caused by repeated multiplication of gradients by values greater than 1. In such cases, the gradients can become very large, causing the model's weights to update in large, unstable steps. This can lead to numerical overflow or an inability to converge during training.
+
+Mathematically, the exploding gradient problem is the opposite of the vanishing gradient problem. If the term \(\frac{\partial h_{t+1}}{\partial h_t}\) is greater than 1, the gradients will increase exponentially as they are propagated back through the network:
+
+\[
+\frac{\partial L}{\partial h_t} = \frac{\partial L}{\partial h_{t+1}} \cdot \frac{\partial h_{t+1}}{\partial h_t}
+\]
+
+This problem leads to instability in the training process, where the weights may fluctuate wildly, preventing the model from finding an optimal solution.
+
+\subsubsection{Gradient Clipping}
+Gradient clipping is a solution to the exploding gradient problem. It involves rescaling the gradients if their norm exceeds a specified threshold, preventing them from growing too large and causing instability in the learning process:
+
+\[
+\mathbf{g} = \frac{\mathbf{g}}{\|\mathbf{g}\|} \cdot \text{threshold}, \quad \text{if} \quad \|\mathbf{g}\| > \text{threshold}
+\]
+
+This technique ensures that the gradients do not cause the model's weights to make large, unstable updates.
+
+\subsection{Vanishing Gradient Problem}
+The vanishing gradient problem occurs when the gradients shrink exponentially as they are propagated back through time. This happens because the gradients are repeatedly multiplied by values smaller than 1 (e.g., activation functions like \(\tanh\) or sigmoid squash their inputs to a small range). Over many time steps, this multiplication causes the gradients to decay towards zero, making it difficult for the model to learn long-range dependencies.
+
+Mathematically, for an RNN, the gradients are propagated back through the network as:
+
+\[
+\frac{\partial L}{\partial h_t} = \frac{\partial L}{\partial h_{t+1}} \cdot \frac{\partial h_{t+1}}{\partial h_t}
+\]
+
+If the term \(\frac{\partial h_{t+1}}{\partial h_t}\) is less than 1 for each time step, the gradient will diminish as it is propagated back through many layers, leading to a vanishing gradient.
+
+This problem makes it very difficult for RNNs to capture long-term dependencies. As a result, models struggle to remember important information from earlier time steps in a sequence.
+
+\subsubsection{Orthogonal Initialization}
+Orthogonal initialization helps mitigate the vanishing gradient problem. By initializing the weight matrices \(U\) as orthogonal matrices, we ensure that the gradients do not shrink exponentially as they propagate through the network. This helps maintain stable learning over many time steps:
+
+\[
+U^\top U = U U^\top = I
+\]
+
+where \(I\) is the identity matrix. This ensures that the weight matrix does not distort the signal as it is passed through the network, helping to preserve the magnitude of gradients during training.
+
+\subsection{Architectural Taxonomy}
+RNNs have several important variants that enhance their ability to model complex temporal dependencies. Below, we discuss some of the most popular architectures used in practice.
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=0.9\linewidth]{graphics/S6RNN/rnn_architectures.png}
+    \caption{Comparison of standard RNN, LSTM, and GRU architectures, illustrating their recurrent connections and gating mechanisms. Source: Suvankar Maity, LinkedIn.}
+    \label{fig:rnn-architectures}
+\end{figure}
+
+\subsubsection{LSTM (Long Short-Term Memory)}
+LSTM is a type of RNN designed to avoid the vanishing gradient problem by introducing memory cells. These cells maintain information over time and use gates to control the flow of data. The key components of an LSTM are the input gate, forget gate, and output gate:
+\[
+i_t = \sigma(W_i x_t + U_i h_{t-1}), \quad f_t = \sigma(W_f x_t + U_f h_{t-1}), \quad o_t = \sigma(W_o x_t + U_o h_{t-1})
+\]
+\[
+c_t = f_t \cdot c_{t-1} + i_t \cdot \tilde{c}_t, \quad h_t = o_t \cdot \tanh(c_t)
+\]
+where \(c_t\) is the cell state, \(i_t\) is the input gate, \(f_t\) is the forget gate, and \(o_t\) is the output gate.
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=0.9\linewidth]{graphics/S6RNN/lstm_maths.png}
+    \caption{Structure of a Long Short‑Term Memory (LSTM) unit showing the input, forget, and output gates along with the cell state update. Source: Josh Starmer, Lightning AI.}
+    \label{fig:lstm-unit}
+\end{figure}
+
+For more in-depth learning about LSTMs, the following resources are highly recommended:
+\begin{itemize}
+    \item \href{https://colah.github.io/posts/2015-08-Understanding-LSTMs/}{Colah's Blog - Understanding LSTMs}
+    \item \href{https://www.youtube.com/watch?v=YCzL96nL7j0}{Josh Starmer's YouTube Video Explaining LSTMs}
+\end{itemize}
+
+\subsubsection{GRU (Gated Recurrent Unit)}
+GRU is a variant of LSTM with fewer gates. It uses two gates: the update gate \(z_t\) and the reset gate \(r_t\). These gates control the amount of information to be retained or discarded at each time step:
+\[
+z_t = \sigma(W_z x_t + U_z h_{t-1}), \quad r_t = \sigma(W_r x_t + U_r h_{t-1})
+\]
+\[
+h_t = (1 - z_t) \cdot h_{t-1} + z_t \cdot \tilde{h}_t
+\]
+GRUs are simpler than LSTMs but perform similarly in many tasks.
+
+
+
+\subsubsection{Seq2Seq (Sequence to Sequence)}
+Seq2Seq models use RNNs to map one sequence to another, making them ideal for tasks like machine translation. The architecture consists of an encoder RNN, which processes the input sequence, and a decoder RNN, which generates the output sequence:
+\[
+h_t = f(h_{t-1}, x_t), \quad y_t = \text{Decoder}(h_t)
+\]
+Seq2Seq models can use LSTMs or GRUs for both the encoder and decoder.
+
+\subsubsection{Bidirectional RNN}
+Bidirectional RNNs (BiRNNs) process each sequence in two directions—forward and backward—allowing the model to incorporate both past and future context when making predictions. At each time step \(t\), the forward and backward hidden states are computed as
+\[
+h^{(f)}_t = \tanh\bigl(W^{(f)} x_t + U^{(f)} h^{(f)}_{t-1}\bigr), 
+\qquad
+h^{(b)}_t = \tanh\bigl(W^{(b)} x_t + U^{(b)} h^{(b)}_{t+1}\bigr),
+\]
+and the output is formed by combining these two states:
+\[
+y_t = V^{(f)} h^{(f)}_t \;+\; V^{(b)} h^{(b)}_t.
+\]
+Here, 
+\(W^{(f)}, W^{(b)}, U^{(f)}, U^{(b)}, V^{(f)}, V^{(b)}\in\mathbb{R}^{d\times d}\),
+and \(x_t,h^{(f)}_t,h^{(b)}_t\in\mathbb{R}^d\) for all \(t\in[1,T]\).
+
+The forward RNN (\(f\)) captures information from the past, while the backward RNN (\(b\)) captures information from the future; their concatenation (or sum) enriches the representation used for each prediction.
+
+\begin{figure}[ht]
+\centering
+\begin{tikzpicture}[%
+    >=latex,              % arrow style
+    node distance=2cm,    % base distance between nodes
+    on grid,
+    every node/.style={font=\footnotesize},
+    inputnode/.style={draw, circle, minimum size=6mm},
+    hiddennode/.style={draw, circle, minimum size=6mm},
+    outputnode/.style={draw, circle, minimum size=6mm},
+    ]
+
+%==================================================
+% Coordinates
+%==================================================
+
+\coordinate (C0) at (-3,0);
+\coordinate (C1) at (0,0);
+\coordinate (C2) at (3,0);
+\coordinate (C3) at (6,0);
+\coordinate (C4) at (9,0);
+
+%==================================================
+% Input nodes
+%==================================================
+\node[inputnode] (x1) at (C1)        {\(x_1\)};
+\node[inputnode] (x2) at (C2)        {\(x_2\)};
+\node[inputnode] (x3) at (C3)        {\(x_3\)};
+
+%==================================================
+% Output nodes
+%==================================================
+
+\node[outputnode] (y1) at ($(C1)+(0,6)$) {\(y_1\)};
+\node[outputnode] (y2) at ($(C2)+(0,6)$) {\(y_2\)};
+\node[outputnode] (y3) at ($(C3)+(0,6)$) {\(y_3\)};
+
+%==================================================
+% Hidden nodes
+%==================================================
+% Forward RNN
+\node[hiddennode] (hf0) at ($(C0)+(0,2)$) {\(h_0^{(f)}\)};
+\node[hiddennode] (hf1) at ($(C1)+(0,2)$) {\(h_1^{(f)}\)};
+\node[hiddennode] (hf2) at ($(C2)+(0,2)$) {\(h_2^{(f)}\)};
+\node[hiddennode] (hf3) at ($(C3)+(0,2)$) {\(h_3^{(f)}\)};
+
+% Backward RNN
+\node[hiddennode] (hb1) at ($(C1)+(0,4)$) {\(h_1^{(b)}\)};
+\node[hiddennode] (hb2) at ($(C2)+(0,4)$) {\(h_2^{(b)}\)};
+\node[hiddennode] (hb3) at ($(C3)+(0,4)$) {\(h_3^{(b)}\)};
+\node[hiddennode] (hb4) at ($(C4)+(0,4)$) {\(h_4^{(b)}\)};
+
+%==================================================
+% Arrows
+%==================================================
+% Forward RNN
+\draw[->] (x1) -- node[right]{\(W^{(f)}\)} (hf1);
+\draw[->] (x2) -- node[right]{\(W^{(f)}\)} (hf2);
+\draw[->] (x3) -- node[right]{\(W^{(f)}\)} (hf3);
+
+\draw[->, bend right=40] (hf1) to node[pos=0.8, right] {\(V^{(b)}\)} (y1);
+\draw[->, bend right=40] (hf2) to node[pos=0.8, right] {\(V^{(b)}\)} (y2);
+\draw[->, bend right=40] (hf3) to node[pos=0.8, right] {\(V^{(b)}\)} (y3);
+
+\draw[->] (hf0) -- node[above]{\(U^{(f)}\)} (hf1);
+\draw[->] (hf1) -- node[above]{\(U^{(f)}\)} (hf2);
+\draw[->] (hf2) -- node[above]{\(U^{(f)}\)} (hf3);
+
+% Backward RNN
+\draw[->, bend left=40] (x1) to node[pos=0.2, left] {\(W^{(b)}\)} (hb1);
+\draw[->, bend left=40] (x2) to node[pos=0.2, left] {\(W^{(b)}\)} (hb2);
+\draw[->, bend left=40] (x3) to node[pos=0.2, left] {\(W^{(b)}\)} (hb3);
+
+\draw[->] (hb3) -- node[left]{\(V^{(b)}\)} (y3);
+\draw[->] (hb2) -- node[left]{\(V^{(b)}\)} (y2);
+\draw[->] (hb1) -- node[left]{\(V^{(b)}\)} (y1);
+
+\draw[->] (hb4) -- node[below]{\(U^{(b)}\)} (hb3);
+\draw[->] (hb3) -- node[below]{\(U^{(b)}\)} (hb2);
+\draw[->] (hb2) -- node[below]{\(U^{(b)}\)} (hb1);
+
+%==================================================
+\end{tikzpicture}
+\caption{Unrolled bidirectional RNN over three time steps, showing the forward and backward hidden states (\(h^{(f)}\) and \(h^{(b)}\)), their recurrent connections (\(U^{(\cdot)}\)), input connections (\(W^{(\cdot)}\)), and output projections (\(V^{(\cdot)}\)).}
+\label{fig:bidirectional-rnn}
+\end{figure}
+
+
+\subsubsection{State Space Models (SSM)}
+State Space Models (SSMs) generalize RNNs by representing the system dynamics as continuous state transitions. SSMs efficiently model long-term dependencies by leveraging structured latent states.
+
+\paragraph{HIPPO (Harmonic Infinite Order Polynomial ODE)}
+The HIPPO framework formulates SSMs using polynomial Ordinary Differential Equations (ODEs). It introduces a harmonic structure that improves the modeling of long-range dependencies by providing a smooth transition between states across time.
+
+\subsubsection{S4 (Structured State Space Model)}
+The S4 model builds on SSMs by leveraging structured state spaces for efficient sequence modeling. By employing matrix decompositions, S4 can handle long sequences more effectively than traditional RNNs, providing better scalability and computational efficiency.
+
+\subsubsection{MAMBA (Masked Multi-Head Attention RNN)}
+MAMBA is a hybrid architecture that combines the benefits of attention mechanisms with RNNs. It uses masked attention heads to focus on relevant parts of the input sequence while processing it, improving performance on tasks like sequence labeling and machine translation.
+
+
+
 
 % =============================================================
 \clearpage\newpage

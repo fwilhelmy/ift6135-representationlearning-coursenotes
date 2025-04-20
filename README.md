@@ -54,7 +54,6 @@ I think including some notes specific to the LLMs models could be interesting bu
 - **Challenges and Techniques:** Aaron talked a lot about the different challenges of VAEs and techniques to adress them. It would be interesting to add more details about this.
 
 ###  Section that needs a lot of work
-- RNNs
 - Diffusion Models
 - RLHF
 - SSL
