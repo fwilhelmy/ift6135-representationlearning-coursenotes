@@ -30,7 +30,6 @@
 
 \maketitle
 
-% Title page (centered)
 \begin{center}
     \huge IFT6135-H25 \\
     \Large Notes du cours -- Hivers 2022 \\
@@ -39,6 +38,18 @@
     \vspace{1cm}
 \end{center}
 \newpage
+
+%TODOS
+
+% from the standford notes:
+    % Weights initialization
+    % Also Weight regularization
+    % Lagrangian
+    % Meta-Learning
+    % Main Metrics (Accuracy, Precision, etc...) with confusion matrix
+    % beautifull figure for dataset separation
+    % neat images for under and over fitting
+
 \section*{Introduction}
 These are my personal notes from the course IFT6135 — Representation Learning — taught by Aaron Courville at MILA in Montreal, Quebec, during the Winter 2025 semester. The course ran from January to April, and it was a deep (pun intended) dive into the theory and practice of learning useful representations from data.
 
@@ -1207,7 +1218,7 @@ An improved variational bound is obtained by importance weighting:
 \]
 Multiple samples tighten the bound and enhance the model's performance.
 
-\subsubsection{SVG / VRNN }
+\subsubsection{SVG / VRNN}
 For sequential data, stochastic variational recurrent networks incorporate latent variables into recurrent architectures. This approach, known as SVG or VRNN, models temporal dependencies alongside latent representations.
 
 % =============================================================
@@ -1708,10 +1719,9 @@ This process generally enhances feature robustness and improves transferability 
 
 % =============================================================
 \clearpage\newpage
-\section{RLHF}
-% TODO I wanna rework the steps based on my personnal notes... No time right now, but let's revisite this and give a more general description of the steps.
+\section{Reinforcement Learning from Human Feedback (RLHF)}
 
-Reinforcement Learning from Human Feedback (RLHF) is a methodology for aligning large language models (LLMs) with human values and preferences. It builds on unsupervised pretraining and supervised instruction tuning, adding a learned reward model from human judgments and a reinforcement learning–based policy optimization to produce models that generate fluent text that also reflect user intent.
+RLHF is a methodology for aligning large language models (LLMs) with human values and preferences. It builds on unsupervised pretraining and supervised instruction tuning, adding a learned reward model from human judgments and a reinforcement learning–based policy optimization to produce models that generate fluent text that also reflects user intent.
 
 Although supervised fine‑tuning can teach an LLM to follow instructions, RLHF directly optimizes model behavior according to human feedback, closing the gap between likelihood and actual preference.
 
@@ -1724,15 +1734,15 @@ Although supervised fine‑tuning can teach an LLM to follow instructions, RLHF 
 
 \subsection{Pretraining (Step 0)}
 
-Pretraining initializes a Transformer by minimizing the next‑token prediction loss over massive unlabeled text:
-\[
-  \mathcal{L}_{\mathrm{LM}}(\theta) = -\sum_{t=1}^n \log p_\theta(x_t \mid x_{1:t-1}).
-\]
-This builds broad linguistic knowledge and yields parameters \(\theta\) that serve as the foundation for all subsequent adaptation.
+The pretraining step consists of making a pre-trained model that understands  is functionnal and has an understanding of the data structures.
+
+In the case of a LLM, pretraining initializes a Transformer by minimizing the next-token prediction loss over massive unlabeled text. This builds broad linguistic knowledge and yields parameters \(\theta\) that serve as the foundation for all subsequent adaptation.
 
 \subsection{Supervised Fine‑Tuning (Step 1)}
 
-Supervised fine‑tuning adapts the pretrained LLM on a corpus of \((\text{instruction},\text{response})\) pairs.  We minimize
+We then perform supervised fine‑tuning on top of the base pretrained model. This helps the model understand the goals and intentions of the users with whom it interacts.
+
+In the case of a LLM, supervised fine‑tuning adapts the pretrained LLM on a corpus of \((\text{instruction},\text{response})\) pairs.  We minimize
 \[
   \mathcal{L}_{\mathrm{SFT}}(\theta) = -\mathbb{E}_{(i,r)\sim\mathcal{D}}\bigl[\log p_\theta(r\mid i)\bigr].
 \]
@@ -1740,23 +1750,70 @@ This stage teaches the model to follow explicit instructions, yielding strong ze
 
 \subsection{Reward Model Training (Step 2)}
 
-To capture fine‑grained human preferences, we collect pairwise comparisons \(s_w \succ s_l\) over multiple candidate responses \(s\). A reward model \(R_\phi(s)\) is then trained via the Bradley–Terry loss:
+To learn a reward function that reflects human judgments, we sidestep the difficulty of assigning absolute scores to single outputs by collecting pairwise comparisons: for each prompt, human annotators choose which response \(s_w\) they prefer over another \(s_l\).  To model these comparisons, we use the Bradley–Terry pairwise preference model, which assumes each response \(s\) has a positive “ability” \(\omega_s\).  The probability that \(s_w\) is preferred to \(s_l\) is
+
 \[
-  J_{\mathrm{RM}}(\phi) = -\mathbb{E}_{(s_w,s_l)}\bigl[\log \sigma\bigl(R_\phi(s_w)-R_\phi(s_l)\bigr)\bigr].
+  P(s_w \succ s_l)
+  \;=\;
+  \frac{\omega_{s_w}}{\omega_{s_w} + \omega_{s_l}}
 \]
-Once trained, \(R_\phi\) provides a scalar score predicting which outputs humans prefer.
+
+By reparameterizing \(\omega_s = \exp\bigl(R_\phi(s)\bigr)\), where \(R_\phi(s)\in\mathbb{R}\) is our learned quality score, this becomes the logistic form
+
+\[
+  P_\phi(s_w \succ s_l)
+  = \sigma\!\bigl(R_\phi(s_w) - R_\phi(s_l)\bigr)
+\]
+
+Fitting the model means maximizing the likelihood of all observed comparisons
+
+\[
+  \mathcal{L}(\phi)
+  = \prod_{(s_w,s_l)} P_\phi(s_w \succ s_l),
+\]
+
+or equivalently minimizing the negative log‐likelihood, which gives our training objective
+
+\[
+  \mathcal{L}_{\mathrm{RM}}(\phi)
+  = -\sum_{(s_w,s_l)} \log \sigma\!\bigl(R_\phi(s_w)-R_\phi(s_l)\bigr).
+\]
+
+\noindent\textbf{Interpretation}  When \(R_\phi(s_w)\gg R_\phi(s_l)\), the model correctly predicts \(s_w\) almost certainly, and the loss is near zero; incorrect preferences incur larger penalties proportional to the score gap.
+
+\noindent\textbf{Regularization \& Calibration}  To prevent overfitting on a limited set of comparisons, we add an \(\ell_2\) penalty on \(\phi\).  A learnable temperature \(\tau\) can also be introduced:
+\[
+  \sigma\!\Bigl(\tfrac{R_\phi(s_w)-R_\phi(s_l)}{\tau}\Bigr),
+\]
+allowing the model to adjust its confidence and better match human judgment noise.
 
 \subsection{Policy Optimization (Step 3)}
 
-Starting from the supervised model \(p_\theta\), we perform reinforcement learning to maximize expected reward while constraining divergence from the pretrained distribution \(p_{\mathrm{PT}}\):
+With the reward model \(R_\phi\) in place, we refine the supervised policy \(p_\theta\) by directly maximizing expected human‐aligned reward, while preventing the model from drifting too far from its pretrained behavior \(p_{\mathrm{PT}}\).  Concretely, we optimize
+
 \[
-  J(\theta) = \mathbb{E}_{s\sim p_\theta}[R_\phi(s)] - \beta\,\mathrm{KL}\bigl[p_\theta \,\|\, p_{\mathrm{PT}}\bigr],
+  J(\theta)
+  = \mathbb{E}_{s\sim p_\theta}\bigl[R_\phi(s)\bigr]
+    - \beta\,\mathrm{KL}\bigl[p_\theta \,\|\, p_{\mathrm{PT}}\bigr].
 \]
-equivalent to optimizing a modified reward
+
+The KL penalty acts as a guardrail against degenerate strategies (e.g.\ outputting nonsensical tokens to chase high reward), by penalizing large departures from the original language distribution.  Equivalently, we can view this as maximizing a modified reward
+
 \[
-  \widetilde R(s) = R_\phi(s) - \beta\,\log\frac{p_\theta(s)}{p_{\mathrm{PT}}(s)}.
+  \widetilde R(s)
+  = R_\phi(s)
+    - \beta\,\log\frac{p_\theta(s)}{p_{\mathrm{PT}}(s)}.
 \]
-We use Proximal Policy Optimization (PPO), employing the clipped surrogate objective to ensure stable updates under the KL constraint.
+
+To perform this optimization stably at scale, we apply Proximal Policy Optimization (PPO).  PPO uses a clipped surrogate objective
+
+\[
+  \mathcal{L}_{\mathrm{PPO}}
+  = \mathbb{E}\Bigl[\min\bigl(r_t(\theta)\,\hat A_t,\;
+    \mathrm{clip}\bigl(r_t(\theta),1-\epsilon,1+\epsilon\bigr)\,\hat A_t\bigr)\Bigr],
+\]
+
+where \(r_t(\theta)=\frac{p_\theta(s_t)}{p_{\theta_{\mathrm{old}}}(s_t)}\) is the importance‐sampling ratio and \(\hat A_t\) is an advantage estimate based on \(\widetilde R(s)\).  The clipping ensures that each update stays within a trust region, preserving the KL constraint and yielding stable, reliable policy improvement.
 
 \begin{figure}[ht]
     \centering
@@ -1767,7 +1824,7 @@ We use Proximal Policy Optimization (PPO), employing the clipped surrogate objec
 
 \subsection{Evaluating the Models}
 
-Human evaluation remains the gold standard but is expensive and time‑consuming. To reduce reliance on costly annotations, “RL from AI feedback” uses a strong LLM (e.g., GPT‑4) to generate or judge comparisons at scale. While faster, LLM‑as‑judge suffers from positional biases and may propagate model blind spots. Open‑ended creative tasks further challenge reward calibration, as there is no single “correct” answer and cross‑entropy penalties may under‑penalize synonyms.
+Human evaluation remains the gold standard but is expensive and time-consuming. To reduce reliance on costly annotations, “RL from AI feedback” uses a strong LLM (e.g., GPT-4) to generate or judge comparisons at scale. While faster, LLM-as-judge suffers from positional biases and may propagate model blind spots. Open-ended creative tasks further challenge reward calibration, as there is no single “correct” answer and cross-entropy penalties may under-penalize synonyms.
 
 \subsection{InstructGPT (Scaling RLHF)}
 
