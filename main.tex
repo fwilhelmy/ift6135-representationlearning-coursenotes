@@ -1215,7 +1215,223 @@ For sequential data, stochastic variational recurrent networks incorporate laten
 
 \section{Generative Adversarial Networks (GANs)} \label{sec:gan}
 
-TODO
+Generative Adversarial Networkss, introduced by Goodfellow et al.\ (2014), are a class of deep learning model that pit two neural networks—a \emph{generator} and a \emph{discriminator}—against each other in a competitive process. The generator attempts to produce realistic synthetic data from random noise inputs, while the discriminator evaluates samples and learns to distinguish generated content from real training data. Through this adversarial training, the generator progressively improves, often yielding high-quality images, audio, or other modalities.
+
+GANs generate high‑quality images, translations, and data augmentations in a single, efficient pass, making them ideal for speed‑sensitive or resource‑constrained applications. In recent years, diffusion models (see \ref{sec:diffusion}) have emerged as a powerful alternative as they offer greater training stability and output diversity. Ongoing research fuses adversarial learning with transformers and domain‑informed priors to create powerful hybrid generative frameworks.
+
+Although GANs employ a latent space much like VAEs, they differ fundamentally in their training objectives. VAEs optimize a tractable lower bound on data likelihood and enforce a specific prior over latent variables, whereas GANs bypass explicit likelihood estimation entirely. This adversarial setup produces sharper images and more realistic textures and lets the model capture an implicit data manifold without the variational constraints VAEs impose.
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=0.75\linewidth]{graphics/S9GAN/manifold_gan.png}
+    \caption{Comparison of the learned manifolds under a traditional max‑likelihood model (left) and a GAN (right). The likelihood‑based approach produces a broad density around a central curve (as in VAEs), while the adversarial approach captures a sharp implicit manifold. (Aaron Courville, IFT6135.)}
+    \label{fig:manifold_gan_vs_vae}
+\end{figure}
+
+\subsection{Discriminator \& Generator}
+\paragraph{The \emph{Generator} \(G\)} defines an implicit model \(p_G\) by transforming a simple noise prior \(z \sim p(z)\) (e.g.\ Gaussian or uniform) into synthetic samples \(x = G(z)\). Its goal is to approximate the true data distribution \(p_{\mathrm{data}}\) without ever computing densities explicitly.  
+
+\paragraph{The \emph{Discriminator} \(D\)} is a binary classifier trained to estimate the probability that a given sample comes from \(p_{\mathrm{data}}\) rather than \(p_G\). By assigning high scores to real data and low scores to generated samples, \(D\) provides a learning signal that guides \(G\) toward more realistic outputs.  
+
+\subsection{Minimax Game}
+Training is formulated as a two‐player minimax game:
+\[
+  \min_G \;\max_D\; V(G,D)
+  \;=\;\mathbb{E}_{x\sim p_{\mathrm{data}}}[\log D(x)]
+  \;+\;\mathbb{E}_{z\sim p(z)}[\log\,(1 - D(G(z)))].
+\]
+In practice, \(D\) and \(G\) are updated alternately:  
+\begin{enumerate}
+  \item \emph{Discriminator step}: maximize \(\mathbb{E}_{x\sim p_{\mathrm{data}}}[\log D(x)] + \mathbb{E}_{z\sim p(z)}[\log(1 - D(G(z)))]\).  
+  \item \emph{Generator step}: minimize \(\mathbb{E}_{z\sim p(z)}[\log(1 - D(G(z)))]\), or often maximize \(\mathbb{E}_{z\sim p(z)}[\log D(G(z))]\) for stronger gradients.  
+\end{enumerate}
+This adversarial interplay drives \(G\) to produce ever more convincing samples while \(D\) becomes a sharper critic. Careful balancing—via learning rates, architectural choices, or loss variants—is key to avoiding issues like vanishing gradients or mode collapse.  
+
+\paragraph{The optimal discriminator} When \(D\) is at its optimal form
+\[
+  D^*(x)
+  = \frac{p_{\mathrm{data}}(x)}{p_{\mathrm{data}}(x)+p_G(x)},
+\]
+the value of the game simplifies to
+\[
+  V\bigl(G,D^*\bigr)
+  = -\ln 4 \;+\; 2\,\mathrm{JS}\bigl(p_{\mathrm{data}}\;\|\;p_G\bigr).
+\]
+Hence, under an optimal discriminator, training the generator is equivalent (up to constants) to minimizing the \textbf{Jensen–Shannon divergence} between the real data distribution and the model distribution.
+
+\subsection{Mode Collapse}
+GANs can suffer from mode collapse, where $G$ maps many any latent codes $z$ to a single output—“mode collapse.”  
+
+Those mode collapse arises when the generator discovers a small pocket of the data distribution that consistently fools the discriminator. Because \(D\) returns only a single scalar per sample, once \(G\) finds \emph{one} output that scores highly, nearby latent points receive gradients that push them toward that same solution.  
+
+The adversarial game then reinforces this shortcut: the discriminator patches the specific weakness, the generator shifts slightly, and the two networks can oscillate around a narrow region instead of exploring all modes.  
+
+Imbalances in capacity exacerbate the issue—an overly strong discriminator carves sharp loss basins that the generator falls into, while a weak \(D\) fails to provide informative gradients elsewhere.
+
+\paragraph{Unrolled GANs.}
+One way to break the feedback loop is to back‑propagate through several future discriminator updates.  
+By seeing how \(D\) would respond, the generator anticipates that a single overused image will soon be penalised, encouraging it to spread probability mass more evenly.
+
+\paragraph{Minibatch Discrimination.}
+Another strategy augments the discriminator with statistics computed across a minibatch.  
+If all samples in the batch look suspiciously similar, \(D\) can penalise the generator directly, pushing it toward greater diversity without changing the overall objective.
+
+\paragraph{PacGAN.}
+Packing multiple images into a single discriminator input has a similar effect.  
+Repeated patterns become easier for \(D\) to spot when several samples are seen jointly, so the generator is forced to populate more of the data manifold to avoid detection.
+
+
+\subsection*{Earth‑Mover Distance (EMD)}
+
+When the data distribution \(p_{\mathrm{data}}\) and the generator distribution \(p_G\) lie on disjoint low‑dimensional manifolds, the Jensen–Shannon loss flattens out, giving the generator no gradient to escape its current mode.  
+A remedy is to replace the JS divergence with the \emph{Earth‑Mover} (Wasserstein‑1) distance, defined by
+\[
+  W(p,q)=\inf_{\gamma\in\Pi(p,q)}
+           \mathbb{E}_{(x,y)\sim\gamma}\|x-y\|
+        =\sup_{\|f\|_{L}\le1}
+           \bigl(\mathbb{E}_{x\sim p}[f(x)]
+                -\mathbb{E}_{x\sim q}[f(x)]\bigr).
+\]
+Here \(\Pi(p,q)\) is the set of couplings whose marginals are \(p\) and \(q\); moving a unit of mass from \(x\) to \(y\) costs \(\|x-y\|\).  
+
+Thus \(W(p,q)\) is the \emph{minimum amount of “work’’} needed to transport probability mass from \(p\) to \(q\), giving it a clear geometric interpretation.
+
+Under mild regularity assumptions, the Wasserstein‑1 distance is continuous everywhere and differentiable almost everywhere, so it supplies informative gradients even when the two distributions have disjoint support.
+
+By optimising this distance instead of JS divergence, WGAN provides a stable, meaningful learning signal and greatly reduces typical GAN pathologies such as vanishing gradients and mode collapse.
+
+\subsection{Spectral Normalisation}
+A lightweight alternative to keep the critic 1‑Lipschitz is to rescales each weight matrix by its largest singular value (spectral norm). For a layer weight \(W\):
+
+\[
+\sigma(W)=\max_{\|\mathbf{h}\|_2\le1}\|W\mathbf{h}\|_2,\qquad 
+\widetilde{W}=W/\sigma(W).
+\]
+
+Because \(\|g\|_{\mathrm{Lip}}=\sigma(W)\) for linear \(g\) and common activations are 1‑Lipschitz, enforcing \(\sigma(W)\le1\) for every layer bounds the whole network:
+
+\[
+\|f\|_{\mathrm{Lip}}\le\prod_{l}\sigma(W^{\,l})\le1.
+\]
+
+Estimate \(\sigma(W)\) each update with a few power‑method iterations; no extra hyper‑parameters are needed.
+
+This yields a tighter, more stable Lipschitz constraint than weight clipping or gradient penalties, improving convergence and sample quality with minimal overhead.
+
+
+\subsection{Quantitative Evaluation of GANs}
+
+\subsubsection{Inception Score (IS) and Mode Score}
+The \emph{Inception Score} evaluates both the confidence and diversity of generated samples via a pretrained classifier:
+\[
+\mathrm{IS}
+= \exp\!\Bigl(\mathbb{E}_{x\sim p_g}\bigl[\mathrm{KL}(p(y\mid x)\,\|\,p(y))\bigr]\Bigr),
+\qquad
+p(y)=\int p(y\mid x)\,p_g(x)\,\mathrm{d}x.
+\]
+
+The \emph{Mode Score} further penalizes mismatch to the real data label distribution:
+\[
+\mathrm{Mode\ Score}
+= \exp\!\Bigl(\mathbb{E}_{x\sim p_g}[\mathrm{KL}(p(y\mid x)\,\|\,p(y))]
+\;-\;\mathrm{KL}(p(y)\,\|\,p_{\mathrm{data}}(y))\Bigr).
+\]
+
+\subsubsection{Fréchet Inception Distance (FID)}
+FID measures the distance between real and generated feature statistics:
+\[
+\mathrm{FID}(p_r,p_g)
+= \|\mu_r - \mu_g\|_2^2
+  + \mathrm{Tr}\bigl(C_r + C_g - 2\,(C_r\,C_g)^{1/2}\bigr),
+\]
+where \(\mu_r, C_r\) and \(\mu_g, C_g\) are the means and covariances of real and generated feature embeddings.
+
+\subsubsection{Kernel MMD}
+Maximum Mean Discrepancy compares distributions via a kernel \(k\):
+\[
+\mathrm{MMD}^2(p_r,p_g)
+= \mathbb{E}_{x,x'\sim p_r}[k(x,x')]
+- 2\,\mathbb{E}_{x\sim p_r,\,y\sim p_g}[k(x,y)]
++ \mathbb{E}_{y,y'\sim p_g}[k(y,y')].
+\]
+
+\subsection{GAN Taxonomy}
+
+\subsubsection{DCGAN (Convolutional GAN)}
+Deep Convolutional GAN (DCGAN) employs strided convolutions in the discriminator and fractional‑stride (deconvolution) layers in the generator, along with batch normalization and ReLU activations, to stabilize training and produce high‑quality images.
+
+\subsubsection{WGAN (Wasserstein GAN)}
+
+When the data and generator live on disjoint manifolds, the Jensen–Shannon loss goes flat and the generator stops learning.  WGAN fixes this by optimising the Earth‑Mover (Wasserstein‑1) distance instead.  The critic \(D_w\) is required to be 1‑Lipschitz, giving the objective
+
+\[
+\min_{G}\;\max_{w:\,\|D_w\|_{L}\le 1}
+\Bigl[\,
+\mathbb{E}_{x\sim p_{\mathrm{data}}} D_w(x)
+-\mathbb{E}_{z\sim p(z)} D_w\!\bigl(G(z)\bigr)
+\Bigr].
+\]
+
+Arjovsky et al.\ enforced the Lipschitz bound by weight‑clipping; WGAN‑GP replaces that with the smoother gradient penalty  
+
+\[
+L_{\mathrm{GP}}
+=\lambda\,\mathbb{E}_{\hat x}\bigl(\|\nabla_{\hat x} D(\hat x)\|_2-1\bigr)^2.
+\]
+
+In practice the critic is updated several times per generator step to maximise the Wasserstein estimate (plus penalty), after which the generator minimises \(-\mathbb{E}_{z}D_w(G(z))\).  This combination yields stable training, meaningful loss curves, and far fewer mode‑collapse incidents—hence its popularity in modern GAN designs.
+
+\subsubsection{CycleGAN}
+CycleGAN performs unpaired image‑to‑image translation between two domains \(X\) and \(Y\) using two generators—\(G\!:\!X\!\rightarrow\!Y\) and \(F\!:\!Y\!\rightarrow\!X\)—and domain‑specific discriminators \(D_Y\) and \(D_X\).  
+Each generator is trained with (i) an adversarial loss to fool its discriminator and (ii) a cycle‑consistency loss
+\[
+  \|F(G(x))-x\|_1 + \|G(F(y))-y\|_1,
+\]
+which enforces that a forward‑and‑back translation reconstructs the input.  
+An optional identity loss preserves colour or content when \(x\) is already in the target style.  
+Together these losses enable high‑quality translations without the need for paired images.
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=0.85\linewidth]{graphics/S9GAN/cyclegan.png}
+    \caption{CycleGAN architecture with two generators and two discriminators; cycle‑consistency ensures round‑trip reconstruction.  
+    Adapted from Zhu \textit{et al.}, ICCV 2017.  
+    Source: \url{https://paperswithcode.com/paper/unpaired-image-to-image-translation-using}.}
+    \label{fig:cyclegan_overview}
+\end{figure}
+
+\subsubsection{SAGAN (Self‑Attention GAN)}
+To capture global context that standard convolutions miss, SAGAN inserts a self‑attention block into \emph{both} generator and discriminator feature streams.  
+Given convolutional features \(x\), three \(1{\times}1\) convolutions create
+\(\textit{query}\;f(x)\), \(\textit{key}\;g(x)\), and \(\textit{value}\;h(x)\) embeddings.  
+Attention weights
+\[
+  \beta_{j,i}= \mathrm{softmax}\bigl(f(x_i)^{\!\top}g(x_j)\bigr)
+\]
+allow every spatial position to draw information from every other, yielding
+\[
+  o_j = v\!\Bigl(\sum_i \beta_{j,i} h(x_i)\Bigr),
+\]
+where \(v(\cdot)\) is another \(1{\times}1\) convolution.  
+A residual path with learnable scale \(\gamma\) returns the aggregated feature map to the main stream (\(\gamma\,o_j + x_j\)).  
+The model is typically trained with a hinge variant of the WGAN loss, and this attention mechanism significantly boosts fidelity on high‑resolution, cluttered images.
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=0.8\linewidth]{graphics/S9GAN/sagan.jpg}
+    \caption{SAGAN self‑attention block: feature maps are linearly projected into \textit{query}, \textit{key}, and \textit{value} spaces; a soft‑maxed similarity matrix \(\beta\) aggregates global information, and a residual connection \(\gamma\,o+x\) returns the attended features.  
+    Source: Jonathan Hui, “GAN – Self‑Attention Generative Adversarial Networks (SAGAN)”, 2019.}
+    \label{fig:sagan_attention}
+\end{figure}
+
+\subsubsection{BigGAN}
+BigGAN scales up both model capacity and batch size on ImageNet, using orthogonal regularization and truncation tricks to achieve state‑of‑the‑art sample quality at high resolutions.
+
+\subsubsection{StyleGAN}
+StyleGAN disentangles high‑level attributes (style) and stochastic variation via adaptive instance normalization (AdaIN) at each convolutional layer, enabling fine control over generated image features.
+
+\subsubsection{SPADE}
+Spatially‑Adaptive Denormalization (SPADE) injects semantic segmentation maps into the normalization layers of the generator, allowing photorealistic semantic image synthesis with spatially coherent outputs.
 
 % =============================================================
 \clearpage\newpage
