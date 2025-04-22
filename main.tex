@@ -1459,124 +1459,220 @@ The golden age of normalizing flows occurred between the eras of \textbf{Generat
     \caption{Visualization of normalizing flows: The top part shows the inference process where data points in the data space \(X\) are transformed into the latent space \(Z\) through the invertible transformation \(f\). The bottom part illustrates the generation process, where samples are drawn from the latent space \(Z\) and mapped back to the data space \(X\) using the inverse transformation \(f^{-1}\).}
     \label{fig:space-transformations}
 \end{figure}
+\section{Diffusion Models}\label{sec:diffusion}
 
-\subsection{Change of Variables and the Jacobian Determinant}
-Given an invertible transformation \( f \) that maps an input \( x \) from a base distribution \( p_X(x) \) to a transformed space \( y = f(x) \), the probability density function \( p_Y(y) \) of the transformed variable can be computed using the \textbf{change of variables formula}:
+Diffusion models generate data by first destroying the structure of a training example through many small noise additions and then learning a time‑reversal process that rebuilds the example step by step, effectively turning a simple noise distribution into complex data such as images, audio, or text.  Introduced in physics‑inspired work by Sohl‑Dickstein \textit{et al.}\ (2015) and revived by Ho \textit{et al.}\ (2020), they have since eclipsed GANs in image quality, powered text‑to‑image systems like DALL·E 2 and Stable Diffusion, enabled high‑fidelity speech synthesis, and recently been adapted to language modelling via discrete masking schedules.
 
+\subsection{Foundations}
+Diffusion models build on the idea of learning \emph{scores}—the gradients of log‑densities—which in turn stem from energy‑based modeling.  An energy‑based model defines an unnormalised density
 \[
-p_Y(y) = p_X(x) \left| \det \frac{d f(x)}{dx} \right|
+  p_\theta(x) \;=\;\frac{1}{Z_\theta}\exp\bigl[-E_\theta(x)\bigr],
 \]
+where \(E_\theta(x)\) is an energy function and \(Z_\theta\) its intractable normaliser.  The key quantity for generation is the \emph{score} 
+\(\nabla_x\log p_\theta(x) = -\nabla_x E_\theta(x)\), 
+which points in the direction of increasing probability.
 
-Where:
-\begin{itemize}
-    \item \( p_X(x) \) is the probability density of the base distribution,
-    \item \( \frac{d f(x)}{dx} \) is the Jacobian matrix of the transformation \( f \),
-    \item \( \left| \det \frac{d f(x)}{dx} \right| \) is the absolute value of the determinant of the Jacobian, which accounts for how the transformation scales volumes in the data space.
-\end{itemize}
-
-This formula allows us to compute the likelihood of data under the transformed distribution \( p_Y \), which is a central task in generative modeling.
-
-\subsection{Criteria for Designing Normalizing Flows}
-When designing normalizing flows, there are key criteria to consider:
-
-
-\textbf{Invertible Architecture:} The architecture must be invertible to ensure that the transformation between the data space and the latent space is bijective. This can be achieved using structures like \textbf{coupling layers} or \textbf{autoregressive transformations}.
-
-\textbf{Efficient Computation of the Change of Variables Equation:} The Jacobian determinant, which is critical for calculating the likelihood, must be efficiently computed. This ensures that normalizing flows can scale to high-dimensional data and complex distributions. The likelihood is computed using the formula:
-
+Score–based models (SBMs) parameterise this gradient directly by a network \(s_\theta(x)\approx\nabla_x\log p(x)\).  Hyvärinen’s score matching objective teaches \(s_\theta\) to satisfy
 \[
-\log p_{\text{model}}(x) = \log p_Y(f(x)) + \log \left| \det \frac{d f(x)}{dx} \right|
+  J_{\text{SM}}(\theta)
+  \;=\;
+  \tfrac12\,\mathbb{E}_{x\sim p_{\text{data}}}
+    \Bigl\|\!s_\theta(x)\!-\!\nabla_x\log p_{\text{data}}(x)\Bigr\|^2
+  \;=\;
+  \mathbb{E}_{x\sim p_{\text{data}}}
+  \Bigl[\mathrm{Tr}\bigl(\nabla_x s_\theta(x)\bigr)
+        +\tfrac12\|s_\theta(x)\|^2\Bigr],
 \]
-
-Where \( p_{\text{model}}(x) \) represents the model distribution, and \( p_Y(f(x)) \) is the base distribution.
-
-The key property that allows normalizing flows to work effectively is that neural networks are composed of functions that can be chained together. This compositional structure ensures that the transformation from the data space to the latent space (and vice versa) remains invertible, as long as each individual function in the chain is invertible. By using this property, normalizing flows can learn complex transformations while preserving the ability to compute exact likelihoods, making them powerful tools for density estimation and generative modeling.
-
-\subsection{Training Normalizing Flows}
-Training normalizing flows involves maximizing the likelihood of the data under the transformed distribution. This is done by minimizing the negative log-likelihood, which can be written as:
-
+but this requires second derivatives and knowledge of \(p_{\text{data}}\).  Instead, \emph{denoising score matching} converts the problem into a simple supervised task by adding Gaussian noise of variance \(\sigma^2\):
 \[
-\mathcal{L}(\theta) = -\sum_{i=1}^N \log p_Y(y_i)
+  L_{\text{DSM}}(\theta)
+  = \mathbb{E}_{x,\varepsilon\sim\mathcal N(0,I)}
+  \bigl\|
+    s_\theta\bigl(x+\sigma\varepsilon\bigr)
+    + \tfrac{\varepsilon}{\sigma}
+  \bigr\|^2.
 \]
+Here the network sees a noisy sample \(x+\sigma\varepsilon\) and learns to predict the negative noise \(-\varepsilon/\sigma\), which equals the score of the perturbed density.
 
-Where \( y_i = f(x_i) \) is the transformed data and \( \theta \) represents the parameters of the flow.
+Diffusion models take this further by gradually corrupting data through a \emph{forward SDE} or discrete Gaussian chain, then learning to reverse that corruption via score estimation at each noise level.  In continuous time one writes
+\[
+  \mathrm{d}x = f(x,t)\,\mathrm{d}t + g(t)\,\mathrm{d}w,
+  \quad
+  \text{with score‑based reverse SDE}
+  \;\;
+  \mathrm{d}x = \bigl(f(x,t)-g(t)^2\nabla_x\log p_t(x)\bigr)\mathrm{d}t + g(t)\,\mathrm{d}\bar w.
+\]
+By estimating \(\nabla_x\log p_t(x)\) for every \(t\), one recovers a continuous‑time denoising process that transitions noise into data with exact likelihoods.
 
-The likelihood is computed using the change of variables formula, and the parameters are optimized using gradient-based methods.
+\subsection{Core Mechanics of Diffusion}
+
+\subsubsection*{Iterative Denoising}
+The diffusion framework introduces a \emph{forward} (noise‑adding) and a \emph{reverse} (noise‑removing) Markov chain.  In the forward direction we corrupt a clean sample \(x_{t-1}\) by a small amount of Gaussian noise
+\[
+  q(x_t\mid x_{t-1})
+    = \mathcal{N}\bigl(\sqrt{1-\beta_t}\,x_{t-1},\,\beta_t I\bigr),
+  \quad t=1,\dots,T,
+\]
+so after \(T\) steps \(x_T\) is almost pure noise.  Generation inverts this trajectory with a learned Gaussian  
+\[
+  p_\theta(x_{t-1}\mid x_t)
+    = \mathcal{N}\bigl(\mu_\theta(x_t,t),\,\sigma_t^2 I\bigr),
+\]
+whose mean \(\mu_\theta\) is predicted by a neural network; stepping from \(x_T\sim\mathcal N(0,I)\) back to \(x_0\) recreates data.
+
+\subsubsection*{Noise Schedulers}
+The sequence \(\{\beta_t\}\) (or its continuous analogue \(\sigma(t)\)) determines \emph{how fast} information is erased.  Linear schedules inject noise at a constant rate, cosine schedules slow near the ends, and sigmoid schedules concentrate corruption mid‑trajectory.  The schedule must strike a balance: too small \(\beta_t\) leaves the model with little denoising practice, too large \(\beta_t\) makes later steps hard to reverse.
+
+\subsubsection*{Variational Upper Bound}
+To train the reverse model we minimise a variational \emph{upper} bound on the negative log‑likelihood,
+\[
+  L(\theta)
+  = \mathbb{E}_{q}\Bigl[
+      D_{\mathrm{KL}}\bigl(q(x_T\mid x_0)\,\|\,p(x_T)\bigr)
+      + \sum_{t=2}^T
+        D_{\mathrm{KL}}\bigl(q(x_{t-1}\mid x_t,x_0)\,\|\,
+                             p_\theta(x_{t-1}\mid x_t)\bigr)
+      - \log p_\theta(x_0\mid x_1)
+    \Bigr].
+\]
+Each KL term compels the network to imitate the exact Bayesian posterior  
+\(
+  q(x_{t-1}\mid x_t,x_0)
+  = \mathcal{N}\bigl(\tilde\mu_t(x_t,x_0),\tilde\beta_t I\bigr),
+\)
+whose closed‑form parameters
+\(
+  \tilde\mu_t,\tilde\beta_t
+\)
+can be computed from the schedule.  Matching these posteriors guarantees that, once trained, the reverse chain reproduces the data distribution.
+
+\subsubsection*{DDPM Formulation}
+Because both forward and reverse kernels are Gaussian, the KL sum collapses to a much simpler “predict‑the‑noise’’ loss (Ho \textit{et al.}, 2020):
+\[
+  \mathcal{L}_{\mathrm{DDPM}}
+  = \mathbb{E}_{t,x_0,\varepsilon\sim\mathcal N(0,I)}
+    \bigl\|\varepsilon - \varepsilon_\theta(x_t,t)\bigr\|_2^{2},
+  \qquad
+  x_t=\sqrt{\bar\alpha_t}\,x_0+\sqrt{1-\bar\alpha_t}\,\varepsilon,
+\]
+where \(\bar\alpha_t=\prod_{s=1}^t(1-\beta_s)\).  The network sees a noisy sample \(x_t\) and the timestep \(t\) and simply regresses the exact noise \(\varepsilon\) that was added—a standard mean‑squared error.
+
+\subsubsection*{Training Objective and Weights}
+We then minimize the DDPM loss with per‑step weights \(\lambda_t\):
+\[
+  \min_\theta
+  \; \mathbb{E}\bigl[\lambda_t\,
+    \|\varepsilon-\varepsilon_\theta(x_t,t)\|_2^2\bigr].
+\]
+Setting \(\lambda_t=\beta_t^2/\sigma_t^2\) recovers the ELBO exactly; setting \(\lambda_t=1\) often improves perceptual quality.  This weighted MSE is therefore the practical training objective used in almost every diffusion implementation.
+
+\subsection{Sampling and Acceleration}
+Once the reverse model is trained we must turn it into fast, high‑quality samplers. Four families of techniques form an incremental speed ladder, each building on the previous one.
+
+\subsubsection{Annealed Langevin / DDPM Sampling}
+The most direct sampler follows the discrete reverse chain exactly: for \(t=T,\dots,1\) draw
+\[
+  x_{t-1}\sim p_\theta(x_{t-1}\mid x_t)
+  = \mathcal{N}\bigl(\mu_\theta(x_t,t),\sigma_t^{2}I\bigr).
+\]
+With \(T\!=\!1000\) this “ancestral’’ procedure is slow but reproduces the training objective perfectly and serves as the baseline.  For score‑based models without an explicit reverse variance, the same idea appears as \emph{annealed Langevin dynamics},
+\[
+  x \leftarrow x + \tfrac{\epsilon_t^2}{2}\,s_\theta(x,t) + \epsilon_t\,z,
+\]
+whose gradient‑plus‑noise update mimics the Gaussian draw above.
+
+\subsubsection{DDIM: Deterministic ODE Path}
+Song \emph{et al.} noticed that if one removes the stochastic term and chooses
+\(
+  \sigma_t^2=0,
+\)
+the reverse chain becomes the explicit Euler discretisation of an ordinary differential equation
+\(
+  \frac{\mathrm{d}x}{\mathrm{d}t}=f_\theta(x,t).
+\)
+The resulting \emph{DDIM} sampler is deterministic and can safely skip timesteps; using only 10–50 evenly spaced \(t\)-values yields almost the same visual quality as the full DDPM, cutting runtime by an order of magnitude.
+
+\subsubsection{Numerical SDE/ODE Solvers}
+Viewing diffusion as an SDE/ODE opens the door to classical integrators.  Higher‑order methods (Heun, Runge–Kutta) or adaptive–step solvers trace the reverse trajectory more accurately than Euler while taking far fewer evaluations of \(f_\theta\).  On modern image tasks, fourth‑order solvers reduce inference to \(\sim\!8\)–12 function calls without sacrificing FID.
+
+\subsubsection{Progressive / Knowledge‑Distillation}
+Finally, \emph{progressive distillation} turns a slow but accurate sampler (e.g.\ DDIM‑25) into a fast student that mimics two consecutive steps in one.  Iterating this teacher‑student compression halves the step count at each stage, eventually producing a network that generates images in 1–4 evaluations.  Because the student re‑uses the same backbone architecture, distillation preserves fidelity while slashing latency to real‑time levels.
+
 
 \subsection{Architectural Taxonomy}
-There are various architectures for normalizing flows, each designed to ensure invertibility and enable efficient computation of the Jacobian determinant. Some notable models include:
+Modern diffusion systems choose a backbone (U‑Net, DiT, or VAE‑compressed variant), equip it with time conditioning, and finish with a noise‑predictor head. Continuous‑time theory and hierarchical tricks refine sampling and likelihoods but leave the core network design unchanged. Four families dominate current work, differing mainly in how they trade spatial bias, scalability, and compute.
 
-\subsubsection{Planar Flows}
-Planar flows are a simple class of flows where the transformation \( f \) is parameterized as:
+\subsubsection{U‑Net}  
+The original DDPM adopts a convolutional U‑Net: down‑sampling encoders capture global context, skip‑connected up‑samplers restore spatial detail, and residual blocks with self‑attention refine features.
 
+A sinusoidal or learned embedding of the timestep \(t\) is added to each residual block so the network knows “how noisy’’ its input is. This design is highly efficient on images and remains the default for latent‑diffusion systems such as Stable Diffusion.
+
+\subsubsection{Diffusion Transformers (DiT)}  
+Replacing convolutions by patch‑wise self‑attention, DiT treats an image as a sequence of tokens and inserts a time embedding into every transformer block. Without inductive spatial bias DiT scales better to large resolutions and datasets; its success mirrors the CNN–to‑ViT transition in discriminative vision.
+
+\subsubsection{Latent Diffusion}  
+Rombach \textit{et al.} showed that one can first compress data through a VAE \(x\mapsto z\) and then learn a diffusion prior in latent space. The denoiser backbone (U‑Net or DiT) now operates on small feature maps, giving a \(10\times\)–\(20\times\) speed‑up and enabling GPU‑friendly \(1024^2\) generation.  Decoding \(z\) back to pixel space is deterministic, so the perceptual quality hinges entirely on the prior’s samples.
+
+\subsubsection{Noise‑Predictor Heads}  
+Regardless of backbone, the final layer projects features to a target that parameterises the reverse kernel. In DDPM–style models it predicts the noise \(\hat\varepsilon\); in ELBO‑exact models it may output both a mean \(\hat\mu\) and variance \(\hat\sigma^2\); in classifier‑free guidance it produces paired conditional and unconditional scores whose linear blend steers sampling.
+
+\subsubsection{Continuous‑Time Views (SDE/ODE)}
+Casting diffusion into continuous time turns the denoiser into the drift term of a stochastic differential equation.  A forward process can be written as  
 \[
-f(x) = x + u \, \tanh(Wx + b)
+  \mathrm{d}x
+  = f(x,t)\,\mathrm{d}t
+  + g(t)\,\mathrm{d}w_t ,
 \]
-
-Where \( u \), \( W \), and \( b \) are learned parameters. The Jacobian determinant for planar flows can be computed exactly, making them an attractive choice for simple tasks.
-
-\subsubsection{RealNVP (Real-valued Non-Volume Preserving)}
-RealNVP employs a coupling layer where the input is split into two parts: one part is transformed using a simple neural network, while the other is left unchanged. The transformation ensures that the Jacobian determinant is easy to compute. The general form of the transformation is:
-
+where \(w_t\) is a Wiener process, \(f\) is a drift term and \(g(t)\) controls the noise scale (for a variance‑preserving formulation one sets \(f(x,t)=-\tfrac12 g(t)^2 x\)).  Training a time‑dependent score network \(s_\theta(x,t)\approx\nabla_x\log p_t(x)\) lets us reverse the diffusion by adding a data‑seeking drift:  
 \[
-y_1 = x_1, \quad y_2 = x_2 \odot \exp(s(x_1)) + t(x_1)
+  \mathrm{d}x
+  = \bigl[f(x,t) - g(t)^2\,s_\theta(x,t)\bigr]\mathrm{d}t
+  + g(t)\,\mathrm{d}\bar w_t ,
 \]
-
-Where \( s(x_1) \) and \( t(x_1) \) are scale and translation functions, respectively, and \( \odot \) denotes element-wise multiplication.
-
-\subsubsection{Glow (Generative Flow with Invertible 1x1 Convolutions)}
-Glow extends RealNVP by using invertible 1x1 convolutions, allowing for a more flexible transformation of the data. This allows the model to perform better on high-dimensional data while maintaining efficient computation of the likelihood.
-
-\subsubsection{Invertible Residual Networks (i-ResNets)}
-Invertible Residual Networks (i-ResNets) extend residual networks to ensure invertibility. They are particularly useful for modeling high-dimensional data, as they offer efficient training and likelihood computation. The transformation in i-ResNets is parameterized by:
-
+with \(\bar w_t\) a time‑reversed Wiener process.  Dropping the stochastic term yields the probability‑flow ODE  
 \[
-y = x + f(x; \theta)
+  \frac{\mathrm{d}x}{\mathrm{d}t}
+  = f(x,t) - \tfrac12 g(t)^2\,s_\theta(x,t) ,
 \]
+whose deterministic trajectories share the same marginals as the SDE.  Integrating this ODE from \(t=T\) (pure noise) to \(t=0\) bijectively maps noise to data, while the change‑of‑variables formula  
+\[
+  \log p_\theta(x_0)
+  = \log p(x_T)
+    - \int_{0}^{T}
+      \mathrm{Tr}\!\bigl[
+        \nabla_x\bigl(f(x,t)-\tfrac12 g(t)^2 s_\theta(x,t)\bigr)
+      \bigr]\,\mathrm{d}t
+\]
+provides an exact likelihood. Viewing diffusion through continuous-time reveals the denoiser as an "infinite‑depth" residual flow; it justifies higher‑order or adaptive ODE/SDE solvers for faster sampling and provides a principled route to compute exact log‑likelihoods.
 
-Where \( f(x; \theta) \) is a residual function that is designed to be invertible.
+\subsubsection{Hierarchical / Multiscale Extensions}  
+\emph{Spectral autoregression} and \emph{hierarchical VAEs} embed intermediate noisy states as latent variables, allowing coarse‑to‑fine generation or multi‑resolution training targets. Architecturally this is implemented by stacking denoisers that share parameters but operate at different spatial scales or noise levels, yielding sharper details and faster convergence.
 
-\subsection{Applications of Normalizing Flows}
+\subsection{Conditioning and Guidance}
+Controlling what a diffusion model produces boils down to modifying its score before each reverse step.  In the simplest \emph{classifier guidance} scheme we add the gradient of an external classifier,
+\[
+  s_{\mathrm{guided}}(x_t,t)
+  = s_\theta(x_t,t)
+    + \gamma\,\nabla_{x_t}\log p_{\mathrm{clf}}\!\bigl(y\mid x_t\bigr),
+\]
+so that the trajectory is nudged toward images the classifier believes belong to class \(y\).  A large weight \(\gamma\) improves the fidelity of individual samples but squeezes them into fewer modes, revealing an unavoidable quality–diversity trade‑off.
 
-\begin{itemize}
-    \item \textbf{Density Estimation:} Learning complex distributions directly from data.
-    \item \textbf{Generative Modeling:} Sampling from complex distributions, such as image and audio generation.
-    \item \textbf{Anomaly Detection:} Using the model's likelihood to detect outliers in data.
-    \item \textbf{Variational Inference:} Approximating complex posterior distributions in Bayesian inference.
-\end{itemize}
+The need to train a separate, fully labeled classifier led to \emph{classifier‑free guidance}.  During training we randomly drop the condition (e.g.\ the text prompt) so the same network learns both a conditional score \(s_{\mathrm{cond}}\) and an unconditional score \(s_{\mathrm{unc}}\).  At inference we blend them
+\[
+  s_{\mathrm{guided}}
+  = (1+w)\,s_{\mathrm{cond}} - w\,s_{\mathrm{unc}},
+\]
+using a single scalar \(w\) to dial between diversity (\(w\!=\!0\)) and prompt adherence (\(w\!\gg\!0\)).  Stable Diffusion popularised this trick and injects the text through cross‑attention layers; the same route works for image, audio or numerical conditioning signals via concatenation or adaptive normalisation.
 
-% =============================================================
-\clearpage\newpage
+Because a prompt is first encoded into a fixed‑length embedding, subtle word order can vanish: the captions \textit{“loaf of bread shaped like a cat’’} and \textit{“cat shaped like a loaf of bread’’} yield almost identical embeddings and hence almost identical pictures.  The text encoder also has little sense of space, so “a red cube on the left of a blue sphere’’ often collapses into overlapping objects.  Inter‑object relations suffer similarly, and the model reproduces dataset biases—watches almost always display \texttt{10:10} because stock photos do.  Techniques such as negative prompts, prompt engineering, and explicit spatial encoders (e.g.\ ControlNet) mitigate these issues but do not remove them entirely.
 
-\section{Diffusion models} \label{sec:diffusion}
+In practice, conditioning therefore involves balancing: a strong guidance weight or a very specific prompt tightens semantic control but narrows diversity; weaker guidance broadens the sample space but risks losing nuance.  Understanding and tuning this dialectic is essential for reliable, bias‑aware generation.
 
-% TODO This section needs lots of love and improvements. (I need to summarize my notes and clean them up!)
+\subsection{Controllable and Latent Diffusion Systems}
+Real‑world pipelines combine these pieces in different ways: DALLE-2 uses a diffusion prior to map text to CLIP embeddings before a cascade of super‑resolvers refines detail; Stable Diffusion employs a latent U‑Net with classifier‑free guidance and the same CLIP encoder; DiT keeps the diffusion core but replaces convolutions with self‑attention throughout.
 
-One interesting note in the course was diffusion models as spectral noise. You saw in that plot that when you do the process of adding the gaussian noise to the image, you loose the high frequency information of the image and you just keep the low frequency information.
-
-The difference of the model diffusion and VAE is that VAE takes from the latent space in one shot but the diffusion models go from noisy to no noise iteratively. This gives time to the model to correct himself, one of the reason why the diffusion models are so performing at the moment.
-
-\subsection{Controlling Diffusion models (Part 2)}
-
-Il y at un tradeoff entre la quality et la quantite des images generer
-
-Tu plug un encoder text avant par exemple stable diffusion alors les deux captions
-"An image of a loaf of bread in the shape of a cat."
-"An image of a cat in the shape of a loaf of bread"
-
-You get almost the same thing which is because the word encoder mix them up and cause the caption to loose the nuances.
-
-Difficulte avec la spacialite dans la generation des images. Genre quelque chose a gauche et un autre a droite.
-
-Aussi difficulte dans les interactions entre les objets et choses.
-
-Dalle essaye toujours de toujours generer 10:10 dans les montres. C'est un biais pcq les photos de montre sur le net c'est tres tres souvent 10:10.
-
-Diffusion discret sont le future?? Mais pas encore de resultats empirique
-
-Les modele de diffusion discret opperere sur les nombres reel??
-
-Toujours chain de markov
+\subsection{Discrete Diffusion for Language}
+The diffusion philosophy extends to tokens by progressively masking words—replacing Gaussian noise with the \texttt{[MASK]} symbol—and training a model to predict the missing token distribution \(p_\theta(x_{t-1}\!\mid\!x_t)\).  Score‑based approaches such as D3PM and unmasking strategies like the Large Language Diffusion Model benefit from \emph{remasking} during inference, which re‑injects uncertainty to avoid early mistakes and yields strong performance on reasoning benchmarks like GSM8K.
 
 % ============================================================
 \clearpage\newpage
