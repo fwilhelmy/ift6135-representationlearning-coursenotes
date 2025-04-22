@@ -1148,51 +1148,43 @@ TODO
 % =============================================================
 \clearpage\newpage
 
-\section{Variational Auto-Encoders (VAEs)}
+\section{Variational Autoencoders (VAEs)}
 This section introduces the central concepts of Variational Auto-Encoders (VAEs). We discuss how high-dimensional data is modeled using a low-dimensional latent space, derive a tractable variational objective, and present the methods that enable end-to-end learning in these models.
 
 \subsection{Manifold Hypothesis}
-In a machine learning context, the manifod hypothesis is the idea that although real world data (like image, audio or text) may exist in a high-dimensional space, the meaningful variations in the data are atually confined to a much lower-dimensional plane or manifold embedded within that high dimensional space. In other words, while each data point is represented by a large number of features, the true degree of freedo (the intrinsic dimensions) are far fewer... There is a limite number of possible values the data points can actually take.
+The manifold hypothesis states that high‑dimensional observations lie near a low‑dimensional manifold. Learning a useful latent code therefore amounts to learning coordinates on (or close to) that manifold.
 
-\subsection{Latent Variable Representation}
-We represent data \(x\) using latent variables \(z\) via a deterministic mapping:
+% TODO add an image here to represent the manifold (the one from the course)
+
+\subsection{Latent‑Variable Model}
+Let \(z\sim\mathcal{N}(0,I)\) and let the decoder \(g_\theta\) map \(z\) to the data space:
 \[
-x = g(z), \quad z \sim \mathcal{N}(0, I)
+x = g_\theta(z),\qquad z\in\mathbb{R}^d,\; d\ll\dim(x).
 \]
-Here, \(z\) encapsulates the underlying factors of variation, and the decoder \(g\) reconstructs the high-dimensional data from \(z\).
-
-\subsubsection{Maximum Likelihood}
-The goal would then be to maximise a mapping such that
+The marginal log‑likelihood is
 \[
-\log p(x) = \log \int p(x|z)p(z)\,dz
+\log p_\theta(x) \;=\; \log\!\int p_\theta(x\mid z)\,p(z)\,dz,
 \]
-However, the integral over \(z\) is generally intractable.
+but the integral is intractable for flexible decoders.
 
-\subsection{The Variational Objective}
-To bypass the intractability of directly computing \(\log p(x)\), VAEs optimize a approximated lower bound on the log-likelihood.
+\subsection{Variational Objective}
+Introduce an approximate posterior \(q_\phi(z\mid x)\) and maximize the ELBO:
 
-\subsubsection{ECLL (Expected Complete-Data Log-Likelihood)}
-An intermediate formulation approximates the complete-data log-likelihood:
 \[
-\mathbb{E}_{q(z|x)}[\log p(x,z)]
+\text{ELBO}(x)=
+  \underbrace{\mathbb{E}_{q_\phi}\!\bigl[\log p_\theta(x\mid z)\bigr]}_{\text{reconstruction}}
+  -\underbrace{\mathrm{KL}\bigl(q_\phi(z\mid x)\,\|\,p(z)\bigr)}_{\text{regularization}}.
 \]
-This expectation serves as a proxy by averaging over the latent variable distribution.
 
-\subsubsection{KL Divergence}
-The KL divergence measures the difference between the approximate posterior and the prior:
+\paragraph{Expected Complete‑Data Log‑Likelihood (ECLL)}
+An equivalent form is
 \[
-D_{\text{KL}}(q(z|x) \Vert p(z|x)) = -\int q(z|x)\,\log \frac{q(z|x)}{p(z|x)} \,dz
+\mathbb{E}_{q_\phi}[\log p_\theta(x,z)]-\mathbb{E}_{q_\phi}[\log q_\phi(z\mid x)],
 \]
-This term regularizes the latent space, ensuring that \(q(z|x)\) remains close to the simple prior \(p(z|x)\).
+highlighting the trade‑off between fitting the joint model and keeping \(q_\phi\) simple.
 
-\subsubsection{ELBO}
-The Evidence Lower Bound (ELBO) is defined as:
-\[
-\text{ELBO} = \mathbb{E}_{q(z|x)}[\log p(x|z)] - D_{\text{KL}}(q(z|x) \Vert p(z))
-\]
-Maximizing the ELBO leads to a practical training objective that both reconstructs \(x\) and regularizes \(q(z|x)\).
 
-\subsection{Backpropagation}
+\subsection{Training \& Backpropagation}
 The entire VAE, including both encoder and decoder, is trained end-to-end via backpropagation using gradients derived from the variational objective.
 
 \subsubsection{The Reparameterization Trick}
@@ -1202,24 +1194,94 @@ z = \mu(x) + \sigma(x)\epsilon, \quad \epsilon \sim \mathcal{N}(0, I)
 \]
 This neat transformation allows us to treat the random sampling as a differentiable operation.
 
+\subsection{Variational Gap}
+The ELBO is a lower bound because
+\[
+\log p_\theta(x)
+  = \text{ELBO}(x)
+  + \underbrace{\mathrm{KL}\!\bigl(q_\phi(z\mid x)\,\|\,p_\theta(z\mid x)\bigr)}_{\text{variational gap}}\!.
+\]
+
+We can decompose the gap further:
+\[
+\mathrm{KL}(q_\phi\!\|p_\theta)
+  = \underbrace{\mathrm{KL}(q_{\phi^*}\!\|p_\theta)}_{\text{approximation gap}}
+  \;+\;
+    \underbrace{\bigl[\,\mathrm{KL}(q_\phi\!\|p_\theta)-\mathrm{KL}(q_{\phi^*}\!\|p_\theta)\bigr]}_{\text{amortization gap}},
+\]
+where \(q_{\phi^*}\) is the best member of the variational family for each \(x\). To reduce the gap, we can use the following methods:
+\begin{itemize}
+  \item \textbf{Richer families} (flows, mixture posteriors, hierarchical VI)
+  \item \textbf{More flexible encoders} (deeper networks, alternating \(\theta/\phi\) updates)
+  \item \textbf{Hybrid methods} (combine VI with short MCMC chains)
+\end{itemize}
+
 \subsection{Architectural Taxonomy}
 
-\subsubsection{VAE-IAF}
-To achieve a richer posterior, we apply a series of invertible transformations:
-\[
-z_T = f_T \circ \cdots \circ f_1(z_0)
-\]
-Inverse Autoregressive Flow (IAF) enables the approximate posterior to capture complex dependencies.
+\subsubsection{Inverse Autoregressive Flow (VAE-IAF)}
+IAF is a \emph{normalising‑flow} construction (see \S\ref{sec:flows}) that starts from a simple diagonal posterior
+\(
+z_{0}\sim q_{\phi}(z\mid x)
+\)
+and pushes it through \(T\) invertible autoregressive maps. 
 
-\subsubsection{IWAE (Weighted Importances)}
-An improved variational bound is obtained by importance weighting:
+Each step updates the latent code according to
 \[
-\log p(x) \approx \log \frac{1}{K} \sum_{k=1}^{K} \frac{p(x,z_k)}{q(z_k|x)}
+    z_{t}
+      = \mu_{t}(z_{t-1}) + \sigma_{t}(z_{t-1})\odot z_{t-1},
+    \qquad t=1,\dots,T,
 \]
-Multiple samples tighten the bound and enhance the model's performance.
+where the masked neural network that outputs \(\mu_{t}\) and
+\(\sigma_{t}\) guarantees a triangular Jacobian. The change‑of‑variables rule gives the transformed density
+\[
+    q_{T}(z_{T}\mid x)
+    = q_{\phi}(z_{0}\mid x)
+      \prod_{t=1}^{T}
+      \bigl|\det\Bigl(\frac{\partial z_{t}}{\partial z_{t-1}}\Bigr)\bigr|^{-1},
+\]
+and the triangular structure collapses the log‑determinant to a simple sum,
+\[
+    \log\bigl|\det(\partial z_{t}/\partial z_{t-1})\bigr|
+    = \sum_{i}\log\sigma_{t,i}.
+\]
 
-\subsubsection{SVG / VRNN}
-For sequential data, stochastic variational recurrent networks incorporate latent variables into recurrent architectures. This approach, known as SVG or VRNN, models temporal dependencies alongside latent representations.
+Inserting the flow into the variational objective provides a compact expression for the ELBO,
+\[
+  \mathcal{L}(\theta,\phi;\,x)
+  = \mathbb{E}_{z_{0}\sim q_{0}}
+    \Biggl[
+        \log p_{\theta}\bigl(x,z_{T}\bigr)
+        - \log q_{0}(z_{0})
+        + \sum_{t=1}^{T}
+            \log\Bigl|\det\Bigl(\frac{\partial z_{t}}{\partial z_{t-1}}\Bigr)\Bigr|
+    \Biggr],
+\]
+
+Because the inverse transformation needed for generation is applied element‑wise, sampling remains fully parallelisable. Empirically, a small number of flow steps—often fewer than eight—already gives a posterior that closely matches a full‑covariance Gaussian on challenging datasets such as CIFAR‑10 (Kingma et al., 2016).
+
+\subsubsection{Importance‑Weighted Autoencoder (IWAE)}
+The ELBO evaluates just one latent sample, whereas the IWAE objective averages over \(K\) importance-weighted samples,
+\[
+  \mathcal{L}_{K}(x)
+    = \mathbb{E}_{z_{1:K}}
+      \Bigl[
+        \log\frac{1}{K}\sum_{k=1}^{K}
+        \frac{p_{\theta}(x,z_{k})}
+             {q_{\phi}(z_{k}\mid x)}
+      \Bigr],
+\]
+producing a lower bound that tightens monotonically with \(K\) and converges to the true log-likelihood as \(K\!\to\!\infty\).
+
+Gradients propagate through the log‑mean‑exp expression; particles with larger importance weights contribute more strongly, nudging the encoder towards regions of high posterior density.  In practice, \(K\!\in\![5,50]\) is enough during training, while much larger values are used only for final evaluation.  Combining IWAE with expressive posterior families such as the IAF normalising flow virtually closes the variational gap on many image and text benchmarks (Burda et al., 2016; Cremer et al., 2018).
+
+\subsubsection{Variational RNN}
+For sequential data, augment a recurrent backbone with latent variables:
+\[
+z_t \sim q_\phi(z_t\mid x_{\le t},z_{<t}),\quad
+x_t \sim p_\theta(x_t\mid z_{\le t},x_{<t}),
+\]
+capturing both dynamics and per‑step uncertainty. Variants include VRNN, SRNN, SVG, and hierarchical temporal VAEs.
+
 % =============================================================
 \clearpage\newpage
 
